@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Creaner</title>
+<link rel="icon" type="image/svg+xml" href="assets/creaner-simbolo.svg">
 <meta name="description" content="Creaner: webs con reservas y presupuestos para negocios de la Costa del Sol.">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -63,6 +64,7 @@ h2.title em.s{font-size:1.1em;color:var(--gold-text)}
 /* nav */
 .nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;background:rgba(13,29,56,.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line-navy);color:var(--on-navy)}
 .nav .wrap{display:flex;align-items:center;justify-content:space-between;gap:20px;height:66px}
+.logo-img{height:30px;width:auto;display:block}
 .logo{display:flex;align-items:baseline;gap:1px;font-weight:800;font-size:23px;letter-spacing:-.03em;text-decoration:none;color:#fff}
 .logo b{color:var(--gold);font-weight:800}
 .logo .sun{width:7px;height:7px;border-radius:50%;background:var(--gold);margin-left:3px;align-self:center;transform:translateY(-6px)}
@@ -228,7 +230,7 @@ footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:1
 <body>
 <header class="nav">
   <div class="wrap">
-    <a class="logo" href="#inicio" aria-label="Creaner, inicio">Crea<b>ner</b><span class="sun" aria-hidden="true"></span></a>
+    <a class="logo" href="#inicio" aria-label="Creaner, inicio"><img src="assets/creaner-logo-web-blanco.svg" alt="Creaner" class="logo-img"></a>
     <nav class="nav-links" aria-label="Secciones">
       <a href="#trabajos">Trabajos</a>
       <a href="#como">Cómo funciona</a>
@@ -441,7 +443,7 @@ footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:1
 
 <footer>
   <div class="wrap">
-    <a class="logo" href="#inicio" style="font-size:20px">Crea<b>ner</b><span class="sun" aria-hidden="true"></span></a>
+    <a class="logo" href="#inicio" style="font-size:20px"><img src="assets/creaner-logo-web-blanco.svg" alt="Creaner" class="logo-img"></a>
     <span>Webs para negocios del sur · Málaga</span>
     <span><a href="https://www.instagram.com/creanerweb/" target="_blank" rel="noopener" style="color:inherit">Instagram @creanerweb</a> · © 2026 Creaner</span>
   </div>
