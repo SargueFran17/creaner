@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root{--ink:#14181e;--muted:#5d6672;--line:#e3e6ea;--bg:#f4f5f7;--card:#fff;--accent:#0d1d38;--gold:#e0b03f;--bad:#a2463a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  header{background:var(--accent);color:#fff;padding:20px 16px 16px}
+  .wrap{max-width:760px;margin:0 auto;padding-inline:16px}
+  header .wrap{padding:0}
+  small.eb{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#a4b0c4}
+  h1{margin:4px 0 0;font-size:22px}
+  .nav{display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap}
+  .nav button{border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;border-radius:999px;padding:8px 14px;font:inherit;font-size:13px;cursor:pointer;min-height:40px}
+  .nav .range{flex:1;text-align:center;font-size:14px;color:#cfd6e2;min-width:140px}
+  .sum{font-size:13px;color:#a4b0c4;margin-top:8px}
+  main{padding-block:20px 60px}
+  .day{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:14px;overflow:hidden}
+  .dh{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);gap:10px}
+  .dh h2{margin:0;font-size:16px}
+  .tag{font-size:11px;font-weight:600;border-radius:999px;padding:3px 9px;background:var(--bg);color:var(--muted)}
+  .tag.closed{background:#fbe9e7;color:var(--bad)}
+  .ap{display:grid;grid-template-columns:62px 1fr auto;gap:4px 12px;padding:12px 16px;border-bottom:1px solid var(--line);align-items:start}
+  .ap:last-child{border-bottom:0}
+  .ap .t{font-weight:700;font-variant-numeric:tabular-nums}
+  .ap .t span{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+  .ap .n{font-weight:600}
+  .ap .d{font-size:13px;color:var(--muted)}
+  .ap a{color:inherit}
+  .ap.cancel{opacity:.5}
+  .ap.cancel .n{text-decoration:line-through}
+  .x{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;font:inherit;font-size:12px;cursor:pointer;min-height:36px}
+  .empty{padding:12px 16px;color:var(--muted);font-size:14px}
+  form.pin,.box{max-width:360px;margin:48px auto;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:12px}
+  label{font-size:13px;font-weight:600}
+  input{font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;width:100%}
+  .btn{border:0;border-radius:999px;background:var(--accent);color:#fff;font:inherit;font-weight:600;padding:12px;cursor:pointer;min-height:44px}
+  .msg{font-size:13px;color:var(--bad);min-height:1em;margin:0}
+  .closer{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:16px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .closer div{display:flex;flex-direction:column;gap:4px;flex:1;min-width:130px}
+  .closer .btn{flex:0 0 auto;padding:10px 16px}
+  .status{text-align:center;color:var(--muted);padding:40px 0}
+  :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <small class="eb">Panel privado · no compartas este enlace ni el PIN</small>
+    <h1 id="title">Citas</h1>
+    <div class="nav" id="nav" hidden>
+      <button type="button" id="prev">‹ Anterior</button>
+      <div class="range" id="range">—</div>
+      <button type="button" id="next">Siguiente ›</button>
+      <button type="button" id="today">Hoy</button>
+    </div>
+    <div class="sum" id="sum"></div>
+  </div>
+</header>
+<main class="wrap" id="main"></main>
+
+<script>
+(function(){
+  var pin = '';
+  var start = hoy();
+  var main = document.getElementById('main');
+  var DIAS = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  var MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+  function hoy(){ var d = new Date(); d.setHours(0,0,0,0); return d; }
+  function pad(n){ return (n < 10 ? '0' : '') + n; }
+  function iso(d){ return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+  function add(d, n){ var x = new Date(d); x.setDate(x.getDate()+n); return x; }
+  function corto(d){ return d.getDate() + ' ' + MESES[d.getMonth()]; }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+  function pedirPin(msg){
+    document.getElementById('nav').hidden = true;
+    main.innerHTML = '<form class="pin" id="pf"><label for="pin">PIN del panel</label>' +
+      '<input id="pin" type="password" inputmode="numeric" autocomplete="current-password" required>' +
+      '<button class="btn" type="submit">Entrar</button><p class="msg">' + esc(msg || '') + '</p></form>';
+    document.getElementById('pin').focus();
+    document.getElementById('pf').addEventListener('submit', function(e){
+      e.preventDefault(); pin = document.getElementById('pin').value.trim(); cargar();
+    });
+  }
+
+  function cargar(){
+    var fin = add(start, 6);
+    document.getElementById('range').textContent = corto(start) + ' – ' + corto(fin);
+    main.innerHTML = '<div class="status">Cargando citas…</div>';
+    google.script.run
+      .withSuccessHandler(function(data){ pintar(data, fin); })
+      .withFailureHandler(function(err){
+        if (/PIN/.test(err.message)) { pin = ''; pedirPin('PIN incorrecto. Inténtalo de nuevo.'); }
+        else main.innerHTML = '<div class="status">No se han podido cargar las citas. ' + esc(err.message) + '</div>';
+      })
+      .panelCitas(pin, iso(start), iso(fin));
+  }
+
+  function cerradoEl(dIso, cerrados){
+    return cerrados.filter(function(c){ return c.desde && dIso >= c.desde && dIso <= c.hasta; })[0];
+  }
+
+  function pintar(data, fin){
+    document.getElementById('title').textContent = data.negocio || 'Citas';
+    document.getElementById('nav').hidden = false;
+    var activas = data.citas.filter(function(c){ return c.estado === 'Confirmada'; });
+    document.getElementById('sum').textContent = activas.length + (activas.length === 1 ? ' cita' : ' citas') + ' en estos 7 días';
+    var html = '<form class="closer" id="cf"><div><label for="c1">Cerrar desde</label><input id="c1" type="date" required></div>' +
+      '<div><label for="c2">Hasta</label><input id="c2" type="date"></div>' +
+      '<div><label for="c3">Motivo</label><input id="c3" type="text" placeholder="Vacaciones, festivo…"></div>' +
+      '<button class="btn" type="submit">Marcar cerrado</button></form>';
+    for (var i = 0; i < 7; i++){
+      var d = add(start, i), k = iso(d);
+      var del = data.citas.filter(function(c){ return c.fecha === k; });
+      var cer = cerradoEl(k, data.cerrados || []);
+      var n = del.filter(function(c){ return c.estado === 'Confirmada'; }).length;
+      html += '<section class="day"><div class="dh"><h2>' + DIAS[d.getDay()] + ' · ' + corto(d) + '</h2>' +
+        (cer ? '<span class="tag closed">Cerrado' + (cer.motivo ? ' · ' + esc(cer.motivo) : '') + '</span>' : '<span class="tag">' + n + (n === 1 ? ' cita' : ' citas') + '</span>') + '</div>';
+      if (!del.length) html += '<div class="empty">Sin citas</div>';
+      del.forEach(function(c){
+        var canc = c.estado !== 'Confirmada';
+        html += '<div class="ap' + (canc ? ' cancel' : '') + '"><div class="t">' + esc(c.hora) + '<span>' + esc(c.fin) + '</span></div>' +
+          '<div><div class="n">' + esc(c.nombre) + (canc ? ' · cancelada' : '') + '</div>' +
+          '<div class="d">' + esc(c.servicio) + ' · ' + esc(c.profesional) + '</div>' +
+          '<div class="d"><a href="tel:' + esc(String(c.telefono).replace(/\s+/g,'')) + '">' + esc(c.telefono) + '</a>' + (c.email ? ' · ' + esc(c.email) : '') + '</div>' +
+          (c.notas ? '<div class="d">“' + esc(c.notas) + '”</div>' : '') + '</div>' +
+          (canc ? '<span></span>' : '<button type="button" class="x" data-id="' + esc(c.id) + '">Cancelar</button>') + '</div>';
+      });
+      html += '</section>';
+    }
+    main.innerHTML = html;
+    document.getElementById('c1').value = iso(start);
+    document.getElementById('cf').addEventListener('submit', function(e){
+      e.preventDefault();
+      var a = document.getElementById('c1').value, b = document.getElementById('c2').value || a, m = document.getElementById('c3').value;
+      google.script.run.withSuccessHandler(cargar).withFailureHandler(function(err){ alertar(err.message); }).panelCerrar(pin, a, b, m);
+    });
+    main.querySelectorAll('button.x').forEach(function(b){
+      b.addEventListener('click', function(){
+        if (b.dataset.confirm !== '1') { b.dataset.confirm = '1'; b.textContent = '¿Seguro? Pulsa otra vez'; return; }
+        b.disabled = true; b.textContent = 'Cancelando…';
+        google.script.run.withSuccessHandler(cargar).withFailureHandler(function(err){ alertar(err.message); }).panelCancelar(pin, b.dataset.id);
+      });
+    });
+  }
+
+  function alertar(m){ document.getElementById('sum').textContent = 'Error: ' + m; }
+
+  document.getElementById('prev').addEventListener('click', function(){ start = add(start, -7); cargar(); });
+  document.getElementById('next').addEventListener('click', function(){ start = add(start, 7); cargar(); });
+  document.getElementById('today').addEventListener('click', function(){ start = hoy(); cargar(); });
+  pedirPin();
+})();
+</script>
+</body>
+</html>
