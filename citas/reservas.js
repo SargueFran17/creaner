@@ -18,15 +18,15 @@
   var DEMO = API === 'demo';
 
   var css = '' +
-    '#creaner-citas{--cc-accent:#0d1d38;--cc-ink:#14181e;--cc-muted:#5d6672;--cc-bg:#fff;--cc-soft:#f1f3f6;--cc-line:#dde1e7;--cc-radius:14px;--cc-font:inherit;--cc-bad:#a2463a}' +
+    ':where(#creaner-citas){--cc-accent:#0d1d38;--cc-ink:#14181e;--cc-muted:#5d6672;--cc-bg:#fff;--cc-soft:#f1f3f6;--cc-line:#dde1e7;--cc-radius:14px;--cc-font:inherit;--cc-bad:#a2463a}' +
     '#creaner-citas .cc{font-family:var(--cc-font);color:var(--cc-ink);background:var(--cc-bg);border:1px solid var(--cc-line);border-radius:calc(var(--cc-radius) + 6px);overflow:hidden;max-width:100%}' +
     '#creaner-citas .cc-head{padding:16px 18px 12px;border-bottom:1px solid var(--cc-line)}' +
     '#creaner-citas .cc-title{margin:0;font-size:20px;font-weight:600}' +
     '#creaner-citas .cc-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:12px 0 0;padding:0;list-style:none}' +
     '#creaner-citas .cc-steps li{font-size:11px;color:var(--cc-muted);display:flex;flex-direction:column;gap:5px}' +
     '#creaner-citas .cc-steps li:before{content:"";height:3px;border-radius:2px;background:var(--cc-line)}' +
-    '#creaner-citas .cc-steps li.on{color:var(--cc-ink);font-weight:600}' +
-    '#creaner-citas .cc-steps li.on:before,#creaner-citas .cc-steps li.done:before{background:var(--cc-accent)}' +
+    '#creaner-citas .cc-steps li.cc-cur{color:var(--cc-ink);font-weight:600}' +
+    '#creaner-citas .cc-steps li.cc-cur:before,#creaner-citas .cc-steps li.cc-past:before{background:var(--cc-accent)}' +
     '#creaner-citas .cc-body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:12px;min-height:340px}' +
     '#creaner-citas .cc-lbl{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--cc-muted);margin:0}' +
     '#creaner-citas .cc-list{display:flex;flex-direction:column;gap:6px}' +
@@ -144,7 +144,7 @@
     else if (S.paso === 4) b = pasoHecho();
     else b = [pasoServicio, pasoPro, pasoDia, pasoDatos][S.paso]();
     var steps = ['Servicio', 'Profesional', 'Día y hora', 'Tus datos'].map(function (t, i) {
-      return '<li class="' + (S.paso === 4 || i < S.paso ? 'done' : i === S.paso ? 'on' : '') + '">' + t + '</li>';
+      return '<li class="' + (S.paso === 4 || i < S.paso ? 'cc-past' : i === S.paso ? 'cc-cur' : '') + '">' + t + '</li>';
     }).join('');
     root.innerHTML = '<div class="cc"><div class="cc-head"><h2 class="cc-title">Reserva tu cita</h2><ol class="cc-steps">' + steps +
       '</ol></div><div class="cc-body">' + b + '</div></div>';
@@ -239,10 +239,22 @@
     else if (id === 'cc-email') S.email = e.target.value; else if (id === 'cc-notas') S.notas = e.target.value;
   });
 
+  window.CreanerCitas = {
+    elegirServicio: function (id) {
+      if (!S.cfg) { pendiente = id; return; }
+      var s = S.cfg.servicios.filter(function (x) { return x.id === id; })[0];
+      if (!s) return;
+      S.servicio = s; S.pro = 'cualquiera'; S.error = '';
+      if (prosPara(s.id).length > 1) { S.paso = 1; draw(); } else { S.paso = 2; cargarDias(); }
+    }
+  };
+  var pendiente = null;
+
   draw();
   if (!API) { root.innerHTML = '<p class="cc-wait">Falta configurar data-api.</p>'; return; }
   get({ accion: 'config' }).then(function (r) {
     if (!r.ok) throw new Error(r.error);
     S.cfg = r; draw();
+    if (pendiente) { var p = pendiente; pendiente = null; window.CreanerCitas.elegirServicio(p); }
   }).catch(fallo);
 })();
