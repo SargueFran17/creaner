@@ -27,7 +27,8 @@ Dónde vive: **en la cuenta de Google del propio negocio** (su Gmail o uno cread
 1. En Apps Script: **Implementar → Nueva implementación** → tipo **Aplicación web**.
 2. *Ejecutar como*: **Yo**. *Quién tiene acceso*: **Cualquier usuario**.
 3. Pulsa **Implementar** y copia la **URL que termina en `/exec`**.
-4. Si más adelante cambias el código: **Implementar → Gestionar implementaciones → editar (lápiz) → Versión: Nueva versión → Implementar**. Así la URL no cambia.
+4. Pégala en la hoja, pestaña **Config**, en el ajuste **URL_WEB**. Se usa para el enlace del panel y para los enlaces de cancelar de los emails.
+5. Si más adelante cambias el código: **Implementar → Gestionar implementaciones → editar (lápiz) → Versión: Nueva versión → Implementar**. Así la URL no cambia.
 
 ## 4. Poner el widget en la web del negocio
 Donde quieras que aparezca la reserva:
@@ -44,7 +45,8 @@ Colores del negocio (opcional, en su CSS):
 ```
 
 ## 5. Panel del negocio
-- Dirección: `URL_DEL_PASO_3?accion=panel` (también en el menú **Creaner Citas → Ver enlace del panel**).
+- Dirección: `URL_DEL_PASO_3?accion=panel` (también en el menú **Creaner Citas → Ver enlace del panel**, que usa URL_WEB).
+- Si sale "No se puede abrir el archivo en estos momentos": la dirección no es la de la implementación activa, o hay varias cuentas de Google abiertas en el navegador (probar en incógnito).
 - Se entra con el **PIN_PANEL** de la pestaña Config. Que el negocio lo guarde en favoritos del móvil.
 - Desde el panel: ver la semana, cancelar citas y marcar días cerrados.
 - Si se activa CALENDARIO = SI, cada cita aparece también en el Google Calendar de la cuenta.

@@ -21,7 +21,7 @@
  *   POST {accion:"reservar", ...}                   crea la cita (cuerpo JSON como text/plain)
  */
 
-var VERSION = '1.0';
+var VERSION = '1.1';
 var HOJAS = {
   config: 'Config',
   servicios: 'Servicios',
@@ -58,7 +58,8 @@ function configurar() {
     ['DIAS_VISTA', '30', 'Cuántos días hacia delante se puede reservar'],
     ['CANCELACION_HORAS', '24', 'Hasta cuántas horas antes puede cancelar el cliente'],
     ['PIN_PANEL', String(Math.floor(100000 + Math.random() * 900000)), 'PIN del panel del negocio. Cámbialo si quieres'],
-    ['CALENDARIO', 'NO', 'SI = añadir cada cita al Google Calendar de esta cuenta']
+    ['CALENDARIO', 'NO', 'SI = añadir cada cita al Google Calendar de esta cuenta'],
+    ['URL_WEB', '', 'Dirección /exec de la implementación (Implementar → Gestionar implementaciones)']
   ]);
   crearHoja_(ss, HOJAS.servicios, ['ID', 'Nombre', 'Duración (min)', 'Precio (€)', 'Categoría', 'Activo'], [
     ['corte', 'Corte', '30', '12', 'Pelo', 'SI'],
@@ -107,10 +108,19 @@ function emailDePrueba() {
 }
 
 function mostrarEnlacePanel() {
-  var url = ScriptApp.getService().getUrl();
-  var msg = url ? ('Panel del negocio:\n' + url + '?accion=panel\n\nPIN: el de la pestaña Config (PIN_PANEL).')
-                : 'Primero publica el script: Implementar → Nueva implementación → Aplicación web.';
+  var c = leerConfig_();
+  var base = (c.URL_WEB || '').replace(/\?.*$/, '');
+  var msg = base
+    ? ('Panel del negocio:\n' + base + '?accion=panel\n\nPIN: el de la pestaña Config (PIN_PANEL).')
+    : 'Pega en Config → URL_WEB la dirección de tu implementación (Implementar → Gestionar implementaciones → URL que termina en /exec). ' +
+      'El panel será esa dirección + ?accion=panel';
   SpreadsheetApp.getUi().alert('Creaner Citas', msg, SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+/** URL pública del script: la de Config (URL_WEB) si está; si no, la que da Google. */
+function urlWeb_() {
+  var c = leerConfig_();
+  return (c.URL_WEB || '').replace(/\?.*$/, '') || ScriptApp.getService().getUrl();
 }
 
 /* =============================== LECTURA DE DATOS =============================== */
@@ -379,7 +389,7 @@ function avisar_(cfg, c, token) {
     });
   } catch (x) { console.error('Aviso al negocio', x); }
   if (!c.email) return;
-  var url = ScriptApp.getService().getUrl() + '?accion=cancelar&id=' + encodeURIComponent(c.id) + '&t=' + token;
+  var url = urlWeb_() + '?accion=cancelar&id=' + encodeURIComponent(c.id) + '&t=' + token;
   try {
     MailApp.sendEmail({
       to: c.email, name: cfg.NEGOCIO, replyTo: cfg.EMAIL_NEGOCIO,
@@ -431,7 +441,7 @@ function paginaCancelar_(id, token, confirmar) {
       try { cancelarFila_(f, cfg); } finally { lock.releaseLock(); }
       html = '<h2>Cita cancelada</h2>' + desc + '<p>Hemos avisado a ' + esc_(cfg.NEGOCIO) + '. ¡Gracias por avisar!</p>';
     } else {
-      var url = ScriptApp.getService().getUrl() + '?accion=cancelar&id=' + encodeURIComponent(id) + '&t=' + encodeURIComponent(token) + '&confirmar=1';
+      var url = urlWeb_() + '?accion=cancelar&id=' + encodeURIComponent(id) + '&t=' + encodeURIComponent(token) + '&confirmar=1';
       html = '<h2>¿Cancelar tu cita?</h2>' + desc +
         '<p><a href="' + url + '" target="_top" style="display:inline-block;background:#1c1f24;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none">Sí, cancelar la cita</a></p>';
     }
