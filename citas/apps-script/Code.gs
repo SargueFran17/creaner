@@ -21,7 +21,7 @@
  *   POST {accion:"reservar", ...}                   crea la cita (cuerpo JSON como text/plain)
  */
 
-var VERSION = '1.1';
+var VERSION = '1.2';
 var HOJAS = {
   config: 'Config',
   servicios: 'Servicios',
@@ -59,7 +59,10 @@ function configurar() {
     ['CANCELACION_HORAS', '24', 'Hasta cuántas horas antes puede cancelar el cliente'],
     ['PIN_PANEL', String(Math.floor(100000 + Math.random() * 900000)), 'PIN del panel del negocio. Cámbialo si quieres'],
     ['CALENDARIO', 'NO', 'SI = añadir cada cita al Google Calendar de esta cuenta'],
-    ['URL_WEB', '', 'Dirección /exec de la implementación (Implementar → Gestionar implementaciones)']
+    ['URL_WEB', '', 'Dirección /exec de la implementación (Implementar → Gestionar implementaciones)'],
+    ['COLOR_PRINCIPAL', '#0d1d38', 'Color de la marca del negocio (cabecera del panel, botones y emails). Formato #RRGGBB'],
+    ['COLOR_ACENTO', '#e0b03f', 'Color secundario para detalles. Formato #RRGGBB'],
+    ['LOGO_URL', '', 'Opcional: dirección de una imagen del logo (PNG o SVG) para el panel y los emails']
   ]);
   crearHoja_(ss, HOJAS.servicios, ['ID', 'Nombre', 'Duración (min)', 'Precio (€)', 'Categoría', 'Activo'], [
     ['corte', 'Corte', '30', '12', 'Pelo', 'SI'],
@@ -372,8 +375,11 @@ function fechaBonita_(fecha) {
 function esc_(s) { return String(s || '').replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
 function plantilla_(titulo, cuerpo) {
+  var c = leerConfig_(), col = color_(c.COLOR_PRINCIPAL, '#1c1f24');
+  var logo = /^https:\/\//.test(c.LOGO_URL || '') ? '<img src="' + esc_(c.LOGO_URL) + '" alt="' + esc_(c.NEGOCIO) + '" style="max-height:48px;margin-bottom:16px">' : '';
   return '<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;color:#1c1f24">' +
-    '<h2 style="margin:0 0 12px">' + esc_(titulo) + '</h2>' + cuerpo +
+    '<div style="height:4px;background:' + col + ';border-radius:2px;margin-bottom:20px"></div>' + logo +
+    '<h2 style="margin:0 0 12px;color:' + col + '">' + esc_(titulo) + '</h2>' + cuerpo +
     '<p style="color:#888;font-size:12px;margin-top:24px">Reservas gestionadas con Creaner</p></div>';
 }
 
@@ -443,7 +449,7 @@ function paginaCancelar_(id, token, confirmar) {
     } else {
       var url = urlWeb_() + '?accion=cancelar&id=' + encodeURIComponent(id) + '&t=' + encodeURIComponent(token) + '&confirmar=1';
       html = '<h2>¿Cancelar tu cita?</h2>' + desc +
-        '<p><a href="' + url + '" target="_top" style="display:inline-block;background:#1c1f24;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none">Sí, cancelar la cita</a></p>';
+        '<p><a href="' + url + '" target="_top" style="display:inline-block;background:' + color_(cfg.COLOR_PRINCIPAL, '#1c1f24') + ';color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none">Sí, cancelar la cita</a></p>';
     }
   }
   return HtmlService.createHtmlOutput('<div style="font-family:Arial,sans-serif;max-width:480px;margin:40px auto;padding:0 16px;color:#1c1f24">' +
@@ -454,6 +460,15 @@ function paginaCancelar_(id, token, confirmar) {
 /* ================================ PANEL DEL NEGOCIO ================================ */
 /* El panel se sirve desde el propio script (?accion=panel) y llama a estas funciones con
    google.script.run. Los datos solo se devuelven si el PIN coincide con PIN_PANEL. */
+
+/** Colores y logo del negocio para el panel. No devuelve datos privados, por eso no pide PIN. */
+function panelEstilo() {
+  var c = leerConfig_();
+  return { negocio: c.NEGOCIO || 'Citas', color: color_(c.COLOR_PRINCIPAL, '#0d1d38'),
+           acento: color_(c.COLOR_ACENTO, '#e0b03f'), logo: /^https:\/\//.test(c.LOGO_URL || '') ? c.LOGO_URL : '' };
+}
+
+function color_(v, porDefecto) { v = String(v || '').trim(); return /^#[0-9a-fA-F]{6}$/.test(v) ? v : porDefecto; }
 
 function comprobarPin_(pin) {
   var cfg = leerConfig_();

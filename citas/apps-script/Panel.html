@@ -8,15 +8,15 @@
   :root{--ink:#14181e;--muted:#5d6672;--line:#e3e6ea;--bg:#f4f5f7;--card:#fff;--accent:#0d1d38;--gold:#e0b03f;--bad:#a2463a}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
-  header{background:var(--accent);color:#fff;padding:20px 16px 16px}
+  header{background:var(--accent);color:var(--on-accent,#fff);padding:20px 16px 16px}
   .wrap{max-width:760px;margin:0 auto;padding-inline:16px}
   header .wrap{padding:0}
-  small.eb{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#a4b0c4}
+  small.eb{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--on-accent,#fff);opacity:.7}
   h1{margin:4px 0 0;font-size:22px}
   .nav{display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap}
-  .nav button{border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;border-radius:999px;padding:8px 14px;font:inherit;font-size:13px;cursor:pointer;min-height:40px}
-  .nav .range{flex:1;text-align:center;font-size:14px;color:#cfd6e2;min-width:140px}
-  .sum{font-size:13px;color:#a4b0c4;margin-top:8px}
+  .nav button{border:1px solid currentColor;background:transparent;color:var(--on-accent,#fff);border-radius:999px;padding:8px 14px;font:inherit;font-size:13px;cursor:pointer;min-height:40px}
+  .nav .range{flex:1;text-align:center;font-size:14px;color:var(--on-accent,#fff);opacity:.8;min-width:140px}
+  .sum{font-size:13px;color:var(--on-accent,#fff);opacity:.75;margin-top:8px}
   main{padding-block:20px 60px}
   .day{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:14px;overflow:hidden}
   .dh{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);gap:10px}
@@ -37,18 +37,20 @@
   form.pin,.box{max-width:360px;margin:48px auto;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:12px}
   label{font-size:13px;font-weight:600}
   input{font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;width:100%}
-  .btn{border:0;border-radius:999px;background:var(--accent);color:#fff;font:inherit;font-weight:600;padding:12px;cursor:pointer;min-height:44px}
+  .btn{border:0;border-radius:999px;background:var(--accent);color:var(--on-accent,#fff);font:inherit;font-weight:600;padding:12px;cursor:pointer;min-height:44px}
   .msg{font-size:13px;color:var(--bad);min-height:1em;margin:0}
   .closer{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:16px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
   .closer div{display:flex;flex-direction:column;gap:4px;flex:1;min-width:130px}
   .closer .btn{flex:0 0 auto;padding:10px 16px}
   .status{text-align:center;color:var(--muted);padding:40px 0}
   :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  @media (max-width:480px){ .nav .range{order:-1;flex-basis:100%;text-align:left} .nav button{flex:1} }
 </style>
 </head>
 <body>
 <header>
   <div class="wrap">
+    <img id="logo" alt="" hidden style="max-height:40px;max-width:200px;display:block;margin-bottom:10px">
     <small class="eb">Panel privado · no compartas este enlace ni el PIN</small>
     <h1 id="title">Citas</h1>
     <div class="nav" id="nav" hidden>
@@ -154,6 +156,20 @@
   document.getElementById('prev').addEventListener('click', function(){ start = add(start, -7); cargar(); });
   document.getElementById('next').addEventListener('click', function(){ start = add(start, 7); cargar(); });
   document.getElementById('today').addEventListener('click', function(){ start = hoy(); cargar(); });
+  function textoSobre(hex){
+    var n = parseInt(hex.slice(1), 16), r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+    function l(v){ return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }
+    return (.2126 * l(r) + .7152 * l(g) + .0722 * l(b)) > .45 ? '#14181e' : '#ffffff';
+  }
+  function aplicarEstilo(e){
+    var root = document.documentElement.style;
+    root.setProperty('--accent', e.color); root.setProperty('--gold', e.acento);
+    root.setProperty('--on-accent', textoSobre(e.color));
+    document.getElementById('title').textContent = e.negocio;
+    document.title = 'Panel · ' + e.negocio;
+    if (e.logo) { var img = document.getElementById('logo'); img.src = e.logo; img.alt = e.negocio; img.hidden = false; }
+  }
+  google.script.run.withSuccessHandler(aplicarEstilo).panelEstilo();
   pedirPin();
 })();
 </script>
