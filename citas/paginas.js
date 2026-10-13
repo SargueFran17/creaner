@@ -100,6 +100,10 @@
     '#creaner-pagina .cp-hb{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;margin-bottom:10px;font-size:14px}' +
     '#creaner-pagina .cp-hb .tr{grid-column:1/-1;height:8px;background:var(--cp-bg);border-radius:4px;overflow:hidden}#creaner-pagina .cp-hb .tr i{display:block;height:100%;background:var(--cp-c);border-radius:4px}' +
     '#creaner-pagina .cp-nota{font-size:12px;color:var(--cp-muted);margin:4px 0 0}' +
+    '#creaner-pagina .cp-fil{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}#creaner-pagina .cp-fil button{border:1px solid #cfd4da;background:#fff;color:inherit;border-radius:999px;padding:7px 14px;font:inherit;font-size:14px;cursor:pointer;min-height:38px}' +
+    '#creaner-pagina .cp-fil button[aria-pressed=true]{background:var(--cp-c);border-color:var(--cp-c);color:var(--cp-on)}' +
+    '#creaner-pagina .cp-closer select{width:100%;font:inherit;font-size:16px;border:1px solid #dde1e7;border-radius:12px;padding:10px 12px;background:#fff;color:inherit}' +
+    '#creaner-pagina .cp-tag.cp-off{background:#fff4e0;color:#8a5a00}' +
     '#creaner-pagina .cp-pin{background:#fff;border:1px solid var(--cp-line);border-radius:14px;padding:20px;max-width:360px;margin:20px auto}#creaner-pagina .cp-pin label{font-weight:600;display:block;margin-bottom:6px}';
 
   var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
@@ -245,6 +249,8 @@
       '<div class="cp-nav" id="cp-nav" hidden><button type="button" id="cp-prev">‹ Anterior</button><div class="cp-rng" id="cp-rng">—</div>' +
       '<button type="button" id="cp-next">Siguiente ›</button><button type="button" id="cp-today">Hoy</button></div>' +
       '<div class="cp-sum" id="cp-sum"></div></div></header><main class="cp-pm" id="cp-main"></main>';
+    var filtro = 'todos';
+    try { filtro = localStorage.getItem('cp-filtro-' + API) || 'todos'; } catch (x) {}
     var main = $('cp-main'), vista = 'agenda', mes = new Date(start.getFullYear(), start.getMonth(), 1);
     var MESES_L = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
     $('cp-prev').onclick = function () { if (vista === 'agenda') start = add(start, -7); else mes = new Date(mes.getFullYear(), mes.getMonth() - 1, 1); cargar(); };
@@ -277,7 +283,8 @@
         pintar(r.datos);
       }).catch(function (x) { main.innerHTML = '<div class="cp-status">No se han podido cargar las citas. ' + esc(x.message) + '</div>'; });
     }
-    function cerradoEl(k, cerrados) { return cerrados.filter(function (c) { return c.desde && k >= c.desde && k <= c.hasta; })[0]; }
+    function delDia(k, cerrados) { return cerrados.filter(function (c) { return c.desde && k >= c.desde && k <= c.hasta; }); }
+    function esTodos(q) { q = String(q || '').trim(); return !q || /^todos$/i.test(q); }
     function accion(body) {
       body.pin = pin;
       post(body).then(function (r) { if (r.pin || r.bloqueado) { pin = ''; return pedirPin(r.error); } cargar(); })
@@ -338,19 +345,36 @@
     }
     function pintar(data) {
       $('cp-nav').hidden = false; $('cp-tabs').hidden = false;
-      var activas = data.citas.filter(function (c) { return c.estado === 'Confirmada'; });
-      $('cp-sum').textContent = activas.length + (activas.length === 1 ? ' cita' : ' citas') + ' en estos 7 días';
-      var html = '<form class="cp-closer" id="cp-cf"><div><label for="cp-c1">Cerrar desde</label><input id="cp-c1" type="date" required></div>' +
+      var pros = data.profesionales || [], varios = pros.length > 1;
+      var nombrePro = {}; pros.forEach(function (p) { nombrePro[p.id] = p.nombre; });
+      if (!varios || (filtro !== 'todos' && !nombrePro[filtro])) filtro = 'todos';
+      var citas = data.citas.filter(function (c) { return filtro === 'todos' || c.profesionalId === filtro; });
+      var activas = citas.filter(function (c) { return c.estado === 'Confirmada'; });
+      $('cp-sum').textContent = activas.length + (activas.length === 1 ? ' cita' : ' citas') + ' en estos 7 días' + (filtro !== 'todos' ? ' · ' + nombrePro[filtro] : '');
+      var html = '';
+      if (varios) {
+        html += '<div class="cp-fil" role="group" aria-label="Ver citas de">' +
+          [{ id: 'todos', nombre: 'Todos' }].concat(pros).map(function (p) {
+            return '<button type="button" data-f="' + esc(p.id) + '" aria-pressed="' + (filtro === p.id) + '">' + esc(p.nombre) + '</button>';
+          }).join('') + '</div>';
+      }
+      html += '<form class="cp-closer" id="cp-cf"><div><label for="cp-c1">Cerrar desde</label><input id="cp-c1" type="date" required></div>' +
         '<div><label for="cp-c2">Hasta</label><input id="cp-c2" type="date"></div>' +
+        (varios ? '<div><label for="cp-c4">¿Quién?</label><select id="cp-c4"><option value="TODOS">Todo el negocio</option>' +
+          pros.map(function (p) { return '<option value="' + esc(p.id) + '"' + (filtro === p.id ? ' selected' : '') + '>Solo ' + esc(p.nombre) + '</option>'; }).join('') + '</select></div>' : '') +
         '<div><label for="cp-c3">Motivo</label><input id="cp-c3" type="text" placeholder="Vacaciones, festivo…"></div>' +
         '<button class="cp-btn" type="submit">Marcar cerrado</button></form>';
       for (var i = 0; i < 7; i++) {
         var d = add(start, i), k = iso(d);
-        var del = data.citas.filter(function (c) { return c.fecha === k; });
-        var cer = cerradoEl(k, data.cerrados || []);
+        var del = citas.filter(function (c) { return c.fecha === k; });
+        var cers = delDia(k, data.cerrados || []);
+        var cer = cers.filter(function (c) { return esTodos(c.quien) || (filtro !== 'todos' && c.quien === filtro); })[0];
+        var fuera = filtro === 'todos' && !cer ? cers.filter(function (c) { return !esTodos(c.quien) && nombrePro[c.quien]; }) : [];
         var n = del.filter(function (c) { return c.estado === 'Confirmada'; }).length;
-        html += '<section class="cp-day"><div class="cp-dh"><h2>' + DIAS[d.getDay()] + ' · ' + corto(d) + '</h2>' +
-          (cer ? '<span class="cp-tag cp-closed">Cerrado' + (cer.motivo ? ' · ' + esc(cer.motivo) : '') + '</span>' : '<span class="cp-tag">' + n + (n === 1 ? ' cita' : ' citas') + '</span>') + '</div>';
+        html += '<section class="cp-day"><div class="cp-dh"><h2>' + DIAS[d.getDay()] + ' · ' + corto(d) + '</h2><span>' +
+          (cer ? '<span class="cp-tag cp-closed">' + (esTodos(cer.quien) ? 'Cerrado' : 'No trabaja') + (cer.motivo ? ' · ' + esc(cer.motivo) : '') + '</span>' :
+            fuera.map(function (c) { return '<span class="cp-tag cp-off">Sin ' + esc(nombrePro[c.quien]) + '</span> '; }).join('') +
+            '<span class="cp-tag">' + n + (n === 1 ? ' cita' : ' citas') + '</span>') + '</span></div>';
         if (!del.length) html += '<div class="cp-empty">Sin citas</div>';
         del.forEach(function (c) {
           var canc = c.estado !== 'Confirmada';
@@ -368,8 +392,15 @@
       $('cp-cf').onsubmit = function (e) {
         e.preventDefault();
         var a = $('cp-c1').value;
-        accion({ accion: 'panel_cerrar', desde: a, hasta: $('cp-c2').value || a, motivo: $('cp-c3').value });
+        accion({ accion: 'panel_cerrar', desde: a, hasta: $('cp-c2').value || a, motivo: $('cp-c3').value, quien: $('cp-c4') ? $('cp-c4').value : 'TODOS' });
       };
+      cada('.cp-fil button', function (b) {
+        b.onclick = function () {
+          filtro = b.getAttribute('data-f');
+          try { localStorage.setItem('cp-filtro-' + API, filtro); } catch (x) {}
+          pintar(data);
+        };
+      }, main);
       cada('button.cp-x', function (b) {
         b.onclick = function () {
           if (b.getAttribute('data-confirm') !== '1') { b.setAttribute('data-confirm', '1'); b.textContent = '¿Seguro? Pulsa otra vez'; return; }

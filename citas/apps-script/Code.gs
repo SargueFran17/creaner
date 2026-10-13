@@ -27,7 +27,7 @@
  * RECORDATORIO_HORAS antes de su cita. Se instala con `configurar` o desde el menú.
  */
 
-var VERSION = '1.7.1';
+var VERSION = '1.8';
 var HOJAS = {
   config: 'Config',
   servicios: 'Servicios',
@@ -365,7 +365,7 @@ function api_(d) {
       guardarOpinion(d.id, d.t, d.n, d.comentario, d.publicar); return { ok: true };
     case 'panel_citas': return conPin_(d.pin, function () { return { ok: true, datos: panelCitas(d.pin, d.desde, d.hasta) }; });
     case 'panel_cancelar': return conPin_(d.pin, function () { panelCancelar(d.pin, d.id); return { ok: true }; });
-    case 'panel_cerrar': return conPin_(d.pin, function () { panelCerrar(d.pin, d.desde, d.hasta, d.motivo); return { ok: true }; });
+    case 'panel_cerrar': return conPin_(d.pin, function () { panelCerrar(d.pin, d.desde, d.hasta, d.motivo, d.quien); return { ok: true }; });
     case 'panel_estadisticas': return conPin_(d.pin, function () { return { ok: true, datos: panelEstadisticas(d.pin, d.mes) }; });
   }
 }
@@ -1141,13 +1141,14 @@ function panelCitas(pin, desde, hasta) {
   var citas = filas_(HOJAS.citas).filter(function (r) {
     var f = normFecha_(r[2]); return f && f >= desde && f <= hasta;
   }).map(function (r) {
-    return { id: r[0], fecha: normFecha_(r[2]), hora: r[3], fin: r[4], servicio: r[6], profesional: r[8],
+    return { id: r[0], fecha: normFecha_(r[2]), hora: r[3], fin: r[4], servicio: r[6], profesional: r[8], profesionalId: r[7],
       nombre: r[9], telefono: r[10], email: r[11], notas: r[12], estado: r[13] };
   }).sort(function (a, b) { return (a.fecha + a.hora).localeCompare(b.fecha + b.hora); });
   var cerrados = filas_(HOJAS.cerrados).map(function (r) {
     return { desde: normFecha_(r[0]), hasta: normFecha_(r[1]) || normFecha_(r[0]), quien: r[2], motivo: r[3] };
   });
-  return { negocio: cfg.NEGOCIO, citas: citas, cerrados: cerrados };
+  var pros = leerProfesionales_().map(function (p) { return { id: p.id, nombre: p.nombre }; });
+  return { negocio: cfg.NEGOCIO, citas: citas, cerrados: cerrados, profesionales: pros };
 }
 
 function panelCancelar(pin, id) {
@@ -1256,11 +1257,13 @@ function panelEstadisticas(pin, mes) {
   };
 }
 
-function panelCerrar(pin, desde, hasta, motivo) {
+function panelCerrar(pin, desde, hasta, motivo, quien) {
   comprobarPin_(pin);
   desde = normFecha_(desde); hasta = normFecha_(hasta) || desde;
   if (!desde) throw new Error('Fecha no válida.');
+  // quien = ID de un profesional activo (solo esa persona no trabaja) o TODOS (cierra el negocio)
+  quien = leerProfesionales_().some(function (p) { return p.id === quien; }) ? quien : 'TODOS';
   SpreadsheetApp.getActive().getSheetByName(HOJAS.cerrados)
-    .appendRow([desde, hasta, 'TODOS', String(motivo || 'Cerrado').slice(0, 80)]);
+    .appendRow([desde, hasta, quien, String(motivo || 'Cerrado').slice(0, 80)]);
   return true;
 }

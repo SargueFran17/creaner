@@ -66,6 +66,7 @@ Así el cliente nunca ve el aviso de "aplicación creada por un usuario de Googl
 - Dirección: `WEB_NEGOCIO/panel.html` (menú **Creaner Citas → Ver enlace del panel**; queda guardada en Config → ENLACE_PANEL).
 - Se entra con el **PIN_PANEL** de la pestaña Config. Que el negocio lo guarde en favoritos del móvil.
 - Desde el panel: ver la semana, cancelar citas y marcar días cerrados.
+- Con más de un profesional activo: botones **Todos / Ana / Luis…** para ver solo las citas de una persona (el panel recuerda la elección en cada móvil) y, al marcar cerrado, **¿Quién?** para dar el día libre a una sola persona (su agenda se bloquea, la del resto sigue abierta). Con un solo profesional no aparece nada de esto.
 - Si se activa CALENDARIO = SI, cada cita aparece también en el Google Calendar de la cuenta.
 
 ## 5c. Estadísticas (en el panel)
