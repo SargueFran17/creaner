@@ -27,7 +27,7 @@
  * RECORDATORIO_HORAS antes de su cita. Se instala con `configurar` o desde el menú.
  */
 
-var VERSION = '1.7';
+var VERSION = '1.7.1';
 var HOJAS = {
   config: 'Config',
   servicios: 'Servicios',
@@ -55,6 +55,12 @@ function onOpen() {
     .addItem('Enviarme un recordatorio de prueba', 'recordatorioDePrueba')
     .addItem('Enviarme una petición de opinión de prueba', 'opinionDePrueba')
     .addToUi();
+}
+
+/** Muestra un mensaje en la hoja; si se ejecuta desde el editor de Apps Script (sin hoja abierta), lo deja en el registro. */
+function aviso_(msg) {
+  try { SpreadsheetApp.getUi().alert('Creaner Citas', msg, SpreadsheetApp.getUi().ButtonSet.OK); }
+  catch (x) { console.log('Creaner Citas: ' + msg); }
 }
 
 /** Crea las pestañas con cabeceras y datos de ejemplo. No borra nada que ya exista. */
@@ -109,9 +115,8 @@ function configurar() {
   asegurarColumnaRecordatorio_();
   instalarActivador_();
 
-  SpreadsheetApp.getUi().alert('Creaner Citas',
-    'Hoja configurada. Rellena Config, Servicios, Profesionales, Horario y Cerrados, y después publica el script como aplicación web.',
-    SpreadsheetApp.getUi().ButtonSet.OK);
+  aviso_(
+    'Hoja configurada. Rellena Config, Servicios, Profesionales, Horario y Cerrados, y después publica el script como aplicación web.');
 }
 
 function crearHoja_(ss, nombre, cabecera, filas) {
@@ -130,8 +135,7 @@ function crearHoja_(ss, nombre, cabecera, filas) {
 /** Para las pruebas del menú: avisa claramente si no hay email del negocio. */
 function emailNegocioOAviso_(c) {
   if (c.EMAIL_NEGOCIO) return true;
-  SpreadsheetApp.getUi().alert('Creaner Citas', 'Falta el email del negocio. Escríbelo en la pestaña Config, en la fila EMAIL_NEGOCIO (columna Valor).',
-    SpreadsheetApp.getUi().ButtonSet.OK);
+  aviso_( 'Falta el email del negocio. Escríbelo en la pestaña Config, en la fila EMAIL_NEGOCIO (columna Valor).');
   return false;
 }
 
@@ -139,7 +143,7 @@ function emailDePrueba() {
   var c = leerConfig_();
   if (!emailNegocioOAviso_(c)) return;
   MailApp.sendEmail({ to: c.EMAIL_NEGOCIO, subject: 'Prueba de Creaner Citas', htmlBody: '<p>Si te llega este email, los avisos funcionan.</p>', name: c.NEGOCIO });
-  SpreadsheetApp.getUi().alert('Email enviado a ' + c.EMAIL_NEGOCIO + '. Mira también en Spam.' + avisoConfig_(c));
+  aviso_('Email enviado a ' + c.EMAIL_NEGOCIO + '. Mira también en Spam.' + avisoConfig_(c));
 }
 
 function mostrarEnlacePanel() {
@@ -152,7 +156,7 @@ function mostrarEnlacePanel() {
     ? ('Panel del negocio:\n' + enlace + '\n\nTambién lo tienes en la pestaña Config, fila ENLACE_PANEL.\nPIN: el de la pestaña Config (PIN_PANEL).')
     : 'Pega en Config → URL_WEB la dirección de tu implementación (Implementar → Gestionar implementaciones → URL que termina en /exec). ' +
       'El panel será esa dirección + ?accion=panel';
-  SpreadsheetApp.getUi().alert('Creaner Citas', msg, SpreadsheetApp.getUi().ButtonSet.OK);
+  aviso_( msg);
 }
 
 /** Crea o actualiza una fila de la pestaña Config. */
@@ -547,11 +551,10 @@ function activarRecordatorios() {
   asegurarColumnaRecordatorio_();
   var nuevo = instalarActivador_();
   var horas = leerConfig_().RECORDATORIO_HORAS;
-  SpreadsheetApp.getUi().alert('Creaner Citas',
+  aviso_(
     (nuevo ? 'Recordatorios activados.' : 'Los recordatorios ya estaban activados.') +
     (horas ? ' Cada cliente recibirá un email unas ' + horas + ' h antes de su cita (nunca entre las 22:00 y las 8:00).'
-           : ' Ojo: RECORDATORIO_HORAS está en 0 en Config, así que no se enviará ninguno hasta que lo cambies.'),
-    SpreadsheetApp.getUi().ButtonSet.OK);
+           : ' Ojo: RECORDATORIO_HORAS está en 0 en Config, así que no se enviará ninguno hasta que lo cambies.'));
 }
 
 /** Crea el activador horario si no existe. Devuelve true si lo ha creado ahora. */
@@ -672,7 +675,7 @@ function recordatorioDePrueba() {
   var pro = leerProfesionales_()[0] || { nombre: 'Profesional' };
   mandarRecordatorio_(cfg, tz, { id: 'PRUEBA', fecha: sumarDias_(hoy_(tz), 1), hora: '10:00', servicio: serv.nombre,
     profesional: pro.nombre, nombre: 'Cliente de prueba', token: 'prueba' }, cfg.RECORDATORIO_HORAS || 26, cfg.EMAIL_NEGOCIO);
-  SpreadsheetApp.getUi().alert('Recordatorio de prueba enviado a ' + cfg.EMAIL_NEGOCIO + '. Mira también en Spam.' + avisoConfig_(cfg));
+  aviso_('Recordatorio de prueba enviado a ' + cfg.EMAIL_NEGOCIO + '. Mira también en Spam.' + avisoConfig_(cfg));
 }
 
 function avisoConfig_(c) {
@@ -1035,7 +1038,7 @@ function opinionDePrueba() {
   if (!emailNegocioOAviso_(cfg)) return;
   var serv = leerServicios_()[0] || { nombre: 'Servicio' }, pro = leerProfesionales_()[0] || { nombre: 'Profesional' };
   mandarPeticionOpinion_(cfg, { id: 'PRUEBA', token: 'prueba', servicio: serv.nombre, profesional: pro.nombre, nombre: 'Cliente de prueba' }, cfg.EMAIL_NEGOCIO);
-  SpreadsheetApp.getUi().alert('Petición de opinión de prueba enviada a ' + cfg.EMAIL_NEGOCIO + '.' +
+  aviso_('Petición de opinión de prueba enviada a ' + cfg.EMAIL_NEGOCIO + '.' +
     (cfg.RESENA_URL ? ' Lleva al enlace de reseñas de Google.' : ' Como no hay RESENA_URL, lleva a la página propia (las estrellas de la prueba no guardan nada).'));
 }
 
