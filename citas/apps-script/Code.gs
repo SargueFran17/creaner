@@ -25,7 +25,7 @@
  * RECORDATORIO_HORAS antes de su cita. Se instala con `configurar` o desde el menú.
  */
 
-var VERSION = '1.5';
+var VERSION = '1.5.1';
 var HOJAS = {
   config: 'Config',
   servicios: 'Servicios',
@@ -471,7 +471,7 @@ function avisar_(cfg, c, token) {
   try {
     MailApp.sendEmail({
       to: c.email, name: cfg.NEGOCIO, replyTo: cfg.EMAIL_NEGOCIO,
-      subject: 'Tu cita en ' + cfg.NEGOCIO + ' está confirmada',
+      subject: 'Cita confirmada en ' + cfg.NEGOCIO + ': ' + fechaBonita_(c.fecha) + ' a las ' + c.hora,
       htmlBody: plantilla_('¡Cita confirmada!', '<p>Hola ' + esc_(c.nombre) + ',</p>' + linea +
         (cfg.DIRECCION ? '<p>📍 ' + esc_(cfg.DIRECCION) + '</p>' : '') +
         (cfg.TELEFONO_NEGOCIO ? '<p>📞 ' + esc_(cfg.TELEFONO_NEGOCIO) + '</p>' : '') +
@@ -753,7 +753,7 @@ function avisarCambio_(cfg, r, antes, nueva, token) {
   try {
     MailApp.sendEmail({
       to: r[11], name: cfg.NEGOCIO, replyTo: cfg.EMAIL_NEGOCIO,
-      subject: 'Tu cita en ' + cfg.NEGOCIO + ' se ha cambiado',
+      subject: 'Cita cambiada en ' + cfg.NEGOCIO + ': ahora el ' + fechaBonita_(nueva.fecha) + ' a las ' + nueva.hora,
       htmlBody: plantilla_('Cita cambiada', '<p>Hola ' + esc_(r[9]) + ',</p><p>Tu cita queda así:</p>' +
         lineaCita_(r[6], nueva.profesional, nueva.fecha, nueva.hora) +
         (cfg.DIRECCION ? '<p>📍 ' + esc_(cfg.DIRECCION) + '</p>' : '') +
