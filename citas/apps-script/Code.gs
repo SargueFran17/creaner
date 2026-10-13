@@ -114,10 +114,19 @@ function crearHoja_(ss, nombre, cabecera, filas) {
   return sh;
 }
 
+/** Para las pruebas del menú: avisa claramente si no hay email del negocio. */
+function emailNegocioOAviso_(c) {
+  if (c.EMAIL_NEGOCIO) return true;
+  SpreadsheetApp.getUi().alert('Creaner Citas', 'Falta el email del negocio. Escríbelo en la pestaña Config, en la fila EMAIL_NEGOCIO (columna Valor).',
+    SpreadsheetApp.getUi().ButtonSet.OK);
+  return false;
+}
+
 function emailDePrueba() {
   var c = leerConfig_();
+  if (!emailNegocioOAviso_(c)) return;
   MailApp.sendEmail({ to: c.EMAIL_NEGOCIO, subject: 'Prueba de Creaner Citas', htmlBody: '<p>Si te llega este email, los avisos funcionan.</p>', name: c.NEGOCIO });
-  SpreadsheetApp.getUi().alert('Email enviado a ' + c.EMAIL_NEGOCIO + '. Mira también en Spam.');
+  SpreadsheetApp.getUi().alert('Email enviado a ' + c.EMAIL_NEGOCIO + '. Mira también en Spam.' + avisoConfig_(c));
 }
 
 function mostrarEnlacePanel() {
@@ -154,10 +163,18 @@ function leerConfig_() {
   c.ANTELACION_MIN_HORAS = parseFloat(c.ANTELACION_MIN_HORAS) || 0;
   c.DIAS_VISTA = parseInt(c.DIAS_VISTA, 10) || 30;
   c.CANCELACION_HORAS = parseFloat(c.CANCELACION_HORAS) || 0;
+  // Email del negocio: si falta o no es válido en Config, se usa el de la cuenta de Google dueña del script.
+  if (!esEmail_(c.EMAIL_NEGOCIO)) {
+    c.EMAIL_CONFIG_VACIO = true;
+    c.EMAIL_NEGOCIO = esEmail_(c.EMAIL) ? c.EMAIL : '';
+    if (!c.EMAIL_NEGOCIO) { try { c.EMAIL_NEGOCIO = Session.getEffectiveUser().getEmail() || ''; } catch (x) {} }
+  }
   // Si la hoja es anterior a la v1.3 y no tiene el ajuste, se usan 26 h (2 más que el plazo de cancelación habitual).
   c.RECORDATORIO_HORAS = (c.RECORDATORIO_HORAS === undefined || c.RECORDATORIO_HORAS === '') ? 26 : (parseFloat(c.RECORDATORIO_HORAS) || 0);
   return c;
 }
+
+function esEmail_(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v || '').trim()); }
 
 function si_(v) { return /^(s[ií]|yes|true|1|x)$/i.test(String(v).trim()); }
 
@@ -554,11 +571,16 @@ function mandarRecordatorio_(cfg, tz, c, faltanH, destino) {
 /** Menú: envía al email del negocio un recordatorio de ejemplo para ver cómo le llega al cliente. */
 function recordatorioDePrueba() {
   var cfg = leerConfig_(), tz = tz_();
+  if (!emailNegocioOAviso_(cfg)) return;
   var serv = leerServicios_()[0] || { nombre: 'Servicio de prueba' };
   var pro = leerProfesionales_()[0] || { nombre: 'Profesional' };
   mandarRecordatorio_(cfg, tz, { id: 'PRUEBA', fecha: sumarDias_(hoy_(tz), 1), hora: '10:00', servicio: serv.nombre,
     profesional: pro.nombre, nombre: 'Cliente de prueba', token: 'prueba' }, cfg.RECORDATORIO_HORAS || 26, cfg.EMAIL_NEGOCIO);
-  SpreadsheetApp.getUi().alert('Recordatorio de prueba enviado a ' + cfg.EMAIL_NEGOCIO + '. Mira también en Spam.');
+  SpreadsheetApp.getUi().alert('Recordatorio de prueba enviado a ' + cfg.EMAIL_NEGOCIO + '. Mira también en Spam.' + avisoConfig_(cfg));
+}
+
+function avisoConfig_(c) {
+  return c.EMAIL_CONFIG_VACIO ? '\n\nOjo: en Config no hay un EMAIL_NEGOCIO válido, así que se ha usado el de esta cuenta. Escríbelo en Config para que los avisos lleguen al email correcto.' : '';
 }
 
 /* ============================ CANCELACIÓN POR EL CLIENTE ============================ */
