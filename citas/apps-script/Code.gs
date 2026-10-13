@@ -25,18 +25,21 @@
  * RECORDATORIO_HORAS antes de su cita. Se instala con `configurar` o desde el menú.
  */
 
-var VERSION = '1.4';
+var VERSION = '1.5';
 var HOJAS = {
   config: 'Config',
   servicios: 'Servicios',
   profesionales: 'Profesionales',
   horario: 'Horario',
   cerrados: 'Cerrados',
-  citas: 'Citas'
+  citas: 'Citas',
+  opiniones: 'Opiniones'
 };
 var CAB_CITAS = ['ID', 'Creada', 'Fecha', 'Hora', 'Fin', 'Servicio ID', 'Servicio', 'Profesional ID', 'Profesional',
-  'Nombre', 'Teléfono', 'Email', 'Notas', 'Estado', 'Token', 'Evento calendario', 'Recordatorio'];
+  'Nombre', 'Teléfono', 'Email', 'Notas', 'Estado', 'Token', 'Evento calendario', 'Recordatorio', 'Reseña'];
 var COL_RECORDATORIO = 17; // columna Q de la pestaña Citas
+var COL_RESENA = 18;       // columna R: cuándo se pidió la opinión/reseña
+var CAB_OPINIONES = ['Fecha', 'Cita ID', 'Nombre', 'Servicio', 'Profesional', 'Puntuación (1-5)', 'Comentario', 'Se puede publicar'];
 
 /* ======================= MENÚ Y CONFIGURACIÓN INICIAL ======================= */
 
@@ -48,6 +51,7 @@ function onOpen() {
     .addSeparator()
     .addItem('Activar recordatorios automáticos', 'activarRecordatorios')
     .addItem('Enviarme un recordatorio de prueba', 'recordatorioDePrueba')
+    .addItem('Enviarme una petición de opinión de prueba', 'opinionDePrueba')
     .addToUi();
 }
 
@@ -73,7 +77,9 @@ function configurar() {
     ['COLOR_ACENTO', '#e0b03f', 'Color secundario para detalles. Formato #RRGGBB'],
     ['LOGO_URL', '', 'Opcional: dirección de una imagen del logo (PNG o SVG) para el panel y los emails'],
     ['SALUDO', '', 'Opcional: título del panel, p. ej. "Hola, Jorge". Vacío = nombre del negocio'],
-    ['FONDO_PANEL', '', 'Opcional: color de fondo del panel. Formato #RRGGBB']
+    ['FONDO_PANEL', '', 'Opcional: color de fondo del panel. Formato #RRGGBB'],
+    ['RESENA_URL', '', 'Enlace para dejar reseña en Google (perfil de empresa → Pedir reseñas). Vacío = el cliente puntúa en una página propia y se guarda en Opiniones'],
+    ['RESENA_HORAS', '2', 'Horas después de la cita para pedir la opinión. 0 = no pedir opiniones']
   ]);
   crearHoja_(ss, HOJAS.servicios, ['ID', 'Nombre', 'Duración (min)', 'Precio (€)', 'Categoría', 'Activo'], [
     ['corte', 'Corte', '30', '12', 'Pelo', 'SI'],
@@ -96,6 +102,7 @@ function configurar() {
     ['2026-12-25', '2026-12-25', 'TODOS', 'Navidad']
   ]);
   crearHoja_(ss, HOJAS.citas, CAB_CITAS, []);
+  crearHoja_(ss, HOJAS.opiniones, CAB_OPINIONES, []);
   asegurarColumnaRecordatorio_();
   instalarActivador_();
 
@@ -185,6 +192,7 @@ function leerConfig_() {
     if (!c.EMAIL_NEGOCIO) { try { c.EMAIL_NEGOCIO = Session.getEffectiveUser().getEmail() || ''; } catch (x) {} }
   }
   // Si la hoja es anterior a la v1.3 y no tiene el ajuste, se usan 26 h (2 más que el plazo de cancelación habitual).
+  c.RESENA_HORAS = (c.RESENA_HORAS === undefined || c.RESENA_HORAS === '') ? 2 : (parseFloat(c.RESENA_HORAS) || 0);
   c.RECORDATORIO_HORAS = (c.RECORDATORIO_HORAS === undefined || c.RECORDATORIO_HORAS === '') ? 26 : (parseFloat(c.RECORDATORIO_HORAS) || 0);
   return c;
 }
@@ -308,6 +316,7 @@ function doGet(e) {
       case 'dias': return json_(apiDias_(q.servicio, q.profesional || 'cualquiera'));
       case 'horas': return json_(apiHoras_(q.fecha, q.servicio, q.profesional || 'cualquiera'));
       case 'cita': return paginaCita_(q.id, q.t);
+      case 'opinion': return paginaOpinion_(q.id, q.t, q.n);
       case 'cancelar': return paginaCancelar_(q.id, q.t, q.confirmar === '1');
       case 'panel': return HtmlService.createHtmlOutputFromFile('Panel')
         .setTitle('Panel de citas').addMetaTag('viewport', 'width=device-width, initial-scale=1');
@@ -506,19 +515,24 @@ function instalarActivador_() {
 function asegurarColumnaRecordatorio_() {
   var sh = SpreadsheetApp.getActive().getSheetByName(HOJAS.citas);
   if (!sh) return null;
-  if (sh.getMaxColumns() < COL_RECORDATORIO) sh.insertColumnsAfter(sh.getMaxColumns(), COL_RECORDATORIO - sh.getMaxColumns());
-  var cab = sh.getRange(1, COL_RECORDATORIO);
-  if (String(cab.getValue()).trim() !== 'Recordatorio') {
-    cab.setValue('Recordatorio').setFontWeight('bold').setBackground('#0d1d38').setFontColor('#ffffff');
-    sh.getRange(2, COL_RECORDATORIO, Math.max(sh.getMaxRows() - 1, 1), 1).setNumberFormat('@');
-  }
+  asegurarColumna_(sh, COL_RECORDATORIO, 'Recordatorio');
+  asegurarColumna_(sh, COL_RESENA, 'Reseña');
   return sh;
 }
 
-/** Lo ejecuta el activador cada hora. */
+function asegurarColumna_(sh, col, nombre) {
+  if (sh.getMaxColumns() < col) sh.insertColumnsAfter(sh.getMaxColumns(), col - sh.getMaxColumns());
+  var cab = sh.getRange(1, col);
+  if (String(cab.getValue()).trim() !== nombre) {
+    cab.setValue(nombre).setFontWeight('bold').setBackground('#0d1d38').setFontColor('#ffffff');
+    sh.getRange(2, col, Math.max(sh.getMaxRows() - 1, 1), 1).setNumberFormat('@');
+  }
+}
+
+/** Lo ejecuta el activador cada hora: recordatorios antes de la cita y petición de opinión después. */
 function enviarRecordatorios() {
   var cfg = leerConfig_();
-  if (!cfg.RECORDATORIO_HORAS) return;
+  if (!cfg.RECORDATORIO_HORAS && !cfg.RESENA_HORAS) return;
   var tz = tz_();
   var horaLocal = parseInt(Utilities.formatDate(new Date(), tz, 'H'), 10);
   if (horaLocal >= RECORDATORIO_SILENCIO[0] || horaLocal < RECORDATORIO_SILENCIO[1]) return;
@@ -528,6 +542,14 @@ function enviarRecordatorios() {
   try {
     var sh = asegurarColumnaRecordatorio_();
     if (!sh) return;
+    if (cfg.RECORDATORIO_HORAS) recordatorios_(cfg, tz, sh);
+    if (cfg.RESENA_HORAS) pedirOpiniones_(cfg, tz, sh);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function recordatorios_(cfg, tz, sh) {
     var vals = sh.getDataRange().getDisplayValues();
     var ahora = Date.now(), enviados = 0;
     for (var i = 1; i < vals.length; i++) {
@@ -561,9 +583,6 @@ function enviarRecordatorios() {
       }
     }
     if (enviados) console.log('Recordatorios enviados: ' + enviados);
-  } finally {
-    lock.releaseLock();
-  }
 }
 
 /** "hoy", "mañana" o la fecha completa. */
@@ -815,6 +834,168 @@ var HTML_CITA_ = '<!doctype html><html lang="es"><head><base target="_top"><meta
   'document.getElementById("no").onclick=inicio;document.getElementById("si").onclick=function(){this.disabled=true;this.textContent="Cancelando…";' +
   'run("citaCancelar",[D.id,D.t],function(){app.innerHTML="<h1>Cita cancelada</h1>"+caja()+"<p class=muted>Hemos avisado a "+e(D.negocio)+". ¡Gracias por avisar!</p>"})}}' +
   'inicio()})();</script></body></html>';
+
+/* ============================ OPINIONES Y RESEÑAS ============================ */
+/* RESENA_HORAS después de cada cita se pide opinión al cliente, una sola vez por email:
+   - con RESENA_URL: botón para dejar la reseña en Google;
+   - sin RESENA_URL: 5 estrellas que llevan a ?accion=opinion y se guardan en la pestaña Opiniones.
+   Se pide a todos por igual (Google no permite pedir reseñas solo a los clientes contentos). */
+
+var RESENA_MAX_H = 48; // no pedir opinión de citas de hace más de 48 h (p. ej. citas pasadas a mano)
+
+function pedirOpiniones_(cfg, tz, sh) {
+  var vals = sh.getDataRange().getDisplayValues();
+  var ahora = Date.now(), enviados = 0, yaPedido = {};
+  for (var k = 1; k < vals.length; k++) {
+    if (/^Enviad/.test(String(vals[k][COL_RESENA - 1] || ''))) yaPedido[String(vals[k][11]).trim().toLowerCase()] = true;
+  }
+  for (var i = 1; i < vals.length; i++) {
+    var r = vals[i];
+    if (String(r[13]).trim() !== 'Confirmada' || String(r[COL_RESENA - 1] || '').trim()) continue;
+    var fecha = normFecha_(r[2]), fin = String(r[4]).trim();
+    if (!fecha || !/^\d{1,2}:\d{2}$/.test(fin)) continue;
+    var pasadasH = (ahora - Utilities.parseDate(fecha + ' ' + fin, tz, 'yyyy-MM-dd HH:mm').getTime()) / 3600000;
+    if (pasadasH < cfg.RESENA_HORAS) continue;
+    if (pasadasH > RESENA_MAX_H) { sh.getRange(i + 1, COL_RESENA).setValue('No enviada (cita antigua)'); continue; }
+    var email = String(r[11] || '').trim();
+    if (!email) { sh.getRange(i + 1, COL_RESENA).setValue('Sin email'); continue; }
+    if (yaPedido[email.toLowerCase()]) { sh.getRange(i + 1, COL_RESENA).setValue('Ya pedida antes'); continue; }
+    if (MailApp.getRemainingDailyQuota() <= CUPO_RESERVADO_CONFIRMACIONES) { console.warn('Opiniones pausadas: poco cupo de emails.'); break; }
+    try {
+      mandarPeticionOpinion_(cfg, { id: r[0], token: r[14], servicio: r[6], profesional: r[8], nombre: r[9], email: email });
+      sh.getRange(i + 1, COL_RESENA).setValue('Enviada ' + Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm') + (cfg.RESENA_URL ? ' (Google)' : ' (propia)'));
+      yaPedido[email.toLowerCase()] = true;
+      enviados++;
+    } catch (x) { console.error('Opinión ' + r[0], x); }
+  }
+  if (enviados) console.log('Peticiones de opinión enviadas: ' + enviados);
+}
+
+function mandarPeticionOpinion_(cfg, c, destino) {
+  var col = color_(cfg.COLOR_PRINCIPAL, '#1c1f24');
+  var cuerpo = '<p>Hola ' + esc_(c.nombre) + ',</p><p>Gracias por venir a ' + esc_(cfg.NEGOCIO) + '. ¿Qué tal tu <b>' + esc_(String(c.servicio).toLowerCase()) +
+    '</b> con ' + esc_(c.profesional) + '?</p>';
+  if (/^https:\/\//.test(cfg.RESENA_URL || '')) {
+    cuerpo += '<p>Si tienes un minuto, tu reseña en Google nos ayuda muchísimo a que más gente nos conozca:</p>' +
+      '<p><a href="' + esc_(cfg.RESENA_URL) + '" style="display:inline-block;background:' + col + ';color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:bold">Dejar mi reseña en Google</a></p>';
+  } else {
+    var base = urlWeb_() + '?accion=opinion&id=' + encodeURIComponent(c.id) + '&t=' + c.token + '&n=';
+    var estrellas = [1, 2, 3, 4, 5].map(function (n) {
+      return '<a href="' + base + n + '" style="font-size:34px;line-height:1;color:#e0a92e;text-decoration:none;padding:0 3px" title="' + n + ' de 5">★</a>';
+    }).join('');
+    cuerpo += '<p>Puntúa tu visita tocando una estrella (5 = genial). Solo te llevará un segundo:</p><p>' + estrellas + '</p>';
+  }
+  MailApp.sendEmail({
+    to: destino || c.email, name: cfg.NEGOCIO, replyTo: cfg.EMAIL_NEGOCIO,
+    subject: '¿Qué tal tu visita a ' + cfg.NEGOCIO + '?',
+    htmlBody: plantilla_('¿Qué tal fue?', cuerpo)
+  });
+}
+
+function hojaOpiniones_() {
+  var ss = SpreadsheetApp.getActive();
+  return ss.getSheetByName(HOJAS.opiniones) || crearHoja_(ss, HOJAS.opiniones, CAB_OPINIONES, []);
+}
+
+/** Crea o actualiza la opinión de una cita. Devuelve true si es nueva. */
+function guardarOpinionFila_(r, datos) {
+  var sh = hojaOpiniones_(), tz = tz_();
+  var vals = sh.getDataRange().getDisplayValues();
+  for (var i = 1; i < vals.length; i++) {
+    if (vals[i][1] === r[0]) {
+      if (datos.n) sh.getRange(i + 1, 6).setValue(String(datos.n));
+      if (datos.comentario !== undefined) sh.getRange(i + 1, 7, 1, 2).setValues([[datos.comentario, datos.publicar ? 'SI' : 'NO']]);
+      return false;
+    }
+  }
+  sh.appendRow([Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm'), r[0], r[9], r[6], r[8], String(datos.n || ''),
+    datos.comentario || '', datos.publicar ? 'SI' : 'NO']);
+  return true;
+}
+
+function citaPorToken_(id, token) {
+  var f = id ? buscarCita_(String(id)) : null;
+  return (f && token && f.r[14] === String(token)) ? f : null;
+}
+
+function avisarOpinion_(cfg, r, n, comentario) {
+  try {
+    MailApp.sendEmail({ to: cfg.EMAIL_NEGOCIO, name: 'Opiniones ' + (cfg.NEGOCIO || ''),
+      subject: (comentario ? 'Nuevo comentario de ' : 'Nueva opinión: ' + n + '/5 de ') + r[9],
+      htmlBody: plantilla_('Opinión de un cliente', '<p><b>' + esc_(r[9]) + '</b> · ' + esc_(r[6]) + ' con ' + esc_(r[8]) + ' (' + esc_(fechaBonita_(normFecha_(r[2]))) + ')</p>' +
+        '<p style="font-size:22px;color:#e0a92e">' + '★★★★★'.slice(0, n) + '<span style="color:#ccc">' + '★★★★★'.slice(n) + '</span></p>' +
+        (comentario ? '<p>“' + esc_(comentario) + '”</p>' : '') + '<p style="color:#888;font-size:13px">Todas las opiniones están en la pestaña Opiniones de tu hoja.</p>') });
+  } catch (x) { console.error('Aviso de opinión', x); }
+}
+
+/** Página a la que llevan las estrellas del email: guarda la puntuación al momento y deja añadir un comentario. */
+function paginaOpinion_(id, token, n) {
+  var cfg = leerConfig_();
+  var f = citaPorToken_(id, token);
+  n = Math.max(1, Math.min(5, parseInt(n, 10) || 0));
+  var datos = { negocio: cfg.NEGOCIO || '', valido: !!f, n: n };
+  if (f) {
+    var lock = LockService.getScriptLock(); lock.tryLock(10000);
+    var nueva;
+    try { nueva = guardarOpinionFila_(f.r, { n: n }); } finally { lock.releaseLock(); }
+    if (nueva) avisarOpinion_(cfg, f.r, n, '');
+    datos.id = f.r[0]; datos.t = f.r[14]; datos.nombre = f.r[9]; datos.profesional = f.r[8];
+  }
+  var col = color_(cfg.COLOR_PRINCIPAL, '#1c1f24'), fondo = color_(cfg.FONDO_PANEL, '#f4f5f7');
+  var logo = /^https:\/\//.test(cfg.LOGO_URL || '') ? cfg.LOGO_URL : '';
+  var html = HTML_OPINION_.replace(/__COLOR__/g, col).replace(/__FONDO__/g, fondo)
+    .replace('__LOGO__', logo ? '<img src="' + esc_(logo) + '" alt="" style="max-height:44px;max-width:200px;display:block;margin:0 auto 10px">' : '')
+    .replace('__DATOS__', JSON.stringify(datos).replace(/</g, '\\u003c'));
+  return HtmlService.createHtmlOutput(html).setTitle('Tu opinión · ' + (cfg.NEGOCIO || ''))
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+/** Lo llama la página de opinión al enviar el comentario (o al cambiar la puntuación). */
+function guardarOpinion(id, token, n, comentario, publicar) {
+  var cfg = leerConfig_(), f = citaPorToken_(id, token);
+  if (!f) throw new Error('Enlace no válido.');
+  n = Math.max(1, Math.min(5, parseInt(n, 10) || 5));
+  comentario = String(comentario || '').trim().slice(0, 600);
+  var lock = LockService.getScriptLock(); lock.tryLock(10000);
+  try { guardarOpinionFila_(f.r, { n: n, comentario: comentario, publicar: !!publicar }); } finally { lock.releaseLock(); }
+  if (comentario) avisarOpinion_(cfg, f.r, n, comentario);
+  return true;
+}
+
+/** Menú: envía al email del negocio la petición de opinión tal como la verá el cliente. */
+function opinionDePrueba() {
+  var cfg = leerConfig_();
+  if (!emailNegocioOAviso_(cfg)) return;
+  var serv = leerServicios_()[0] || { nombre: 'Servicio' }, pro = leerProfesionales_()[0] || { nombre: 'Profesional' };
+  mandarPeticionOpinion_(cfg, { id: 'PRUEBA', token: 'prueba', servicio: serv.nombre, profesional: pro.nombre, nombre: 'Cliente de prueba' }, cfg.EMAIL_NEGOCIO);
+  SpreadsheetApp.getUi().alert('Petición de opinión de prueba enviada a ' + cfg.EMAIL_NEGOCIO + '.' +
+    (cfg.RESENA_URL ? ' Lleva al enlace de reseñas de Google.' : ' Como no hay RESENA_URL, lleva a la página propia (las estrellas de la prueba no guardan nada).'));
+}
+
+var HTML_OPINION_ = '<!doctype html><html lang="es"><head><base target="_top"><meta charset="utf-8"><style>' +
+  '*{box-sizing:border-box}body{margin:0;background:__FONDO__;color:#1c1f24;font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}' +
+  '.w{max-width:480px;margin:0 auto;padding:28px 16px 48px}.neg{text-align:center;color:#6b7280;font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 14px}' +
+  '.card{background:#fff;border:1px solid #e3e6ea;border-radius:16px;padding:20px}h1{font-size:22px;margin:0 0 6px}.muted{color:#6b7280;font-size:14px}' +
+  '.st{display:flex;gap:4px;margin:12px 0}.st button{border:0;background:none;font-size:38px;line-height:1;color:#d6d9de;cursor:pointer;padding:0 2px}.st button.on{color:#e0a92e}' +
+  'textarea{width:100%;min-height:96px;font:inherit;font-size:16px;border:1px solid #dde1e7;border-radius:12px;padding:10px 12px;resize:vertical}' +
+  'label.ck{display:flex;gap:8px;align-items:flex-start;font-size:14px;color:#4b5563;margin:12px 0}label.ck input{margin-top:3px}' +
+  '.btn{display:block;width:100%;border:0;border-radius:999px;background:__COLOR__;color:#fff;font:inherit;font-weight:600;padding:13px;min-height:48px;cursor:pointer;margin-top:6px}.btn:disabled{opacity:.5}' +
+  '.err{color:#a2463a;font-size:14px;min-height:1em;margin:10px 0 0}' +
+  '</style></head><body><div class="w">__LOGO__<p class="neg" id="neg"></p><div class="card" id="app"></div></div><script>' +
+  '(function(){var D=__DATOS__,app=document.getElementById("app"),n=D.n;document.getElementById("neg").textContent=D.negocio;' +
+  'function e(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\\"":"&quot;"}[c]})}' +
+  'if(!D.valido){app.innerHTML="<h1>Enlace no válido</h1><p class=muted>No encontramos esta visita.</p>";return}' +
+  'app.innerHTML="<h1>¡Gracias, "+e(D.nombre)+"!</h1><p class=muted>Hemos guardado tu puntuación. Puedes cambiarla aquí:</p>"+' +
+  '\'<div class="st" id="st">\'+[1,2,3,4,5].map(function(i){return \'<button type="button" data-n="\'+i+\'" aria-label="\'+i+\' de 5">★</button>\'}).join("")+"</div>"+' +
+  '\'<p style="margin:14px 0 6px;font-weight:600">¿Quieres contarnos algo más? (opcional)</p><textarea id="tx" maxlength="600" placeholder="Qué te gustó, qué mejorarías…"></textarea>\'+' +
+  '\'<label class="ck"><input type="checkbox" id="pb"> Podéis mostrar mi opinión en la web con mi nombre de pila.</label>\'+' +
+  '\'<button class="btn" id="ok">Enviar</button><p class="err" id="err"></p>\';' +
+  'function pinta(){Array.prototype.forEach.call(document.querySelectorAll("#st button"),function(b){b.classList.toggle("on",+b.getAttribute("data-n")<=n)})}pinta();' +
+  'Array.prototype.forEach.call(document.querySelectorAll("#st button"),function(b){b.onclick=function(){n=+b.getAttribute("data-n");pinta()}});' +
+  'document.getElementById("ok").onclick=function(){var b=this;b.disabled=true;b.textContent="Enviando…";' +
+  'google.script.run.withSuccessHandler(function(){app.innerHTML="<h1>¡Recibido!</h1><p>Gracias por tu opinión. A "+e(D.profesional)+" le ayuda mucho saber qué tal fue.</p>"})' +
+  '.withFailureHandler(function(x){b.disabled=false;b.textContent="Enviar";document.getElementById("err").textContent=x.message||String(x)})' +
+  '.guardarOpinion(D.id,D.t,n,document.getElementById("tx").value,document.getElementById("pb").checked)}})();</script></body></html>';
 
 /* ============================ CANCELACIÓN POR EL CLIENTE ============================ */
 

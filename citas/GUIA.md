@@ -72,6 +72,15 @@ Colores del negocio (opcional, en su CSS):
 - El negocio recibe un email con la hora antigua y la nueva; el cliente, la confirmación del cambio.
 - Los enlaces antiguos de "Cancela tu cita aquí" siguen funcionando.
 
+## Opiniones y reseñas
+- Unas RESENA_HORAS (2 por defecto) después de cada cita, el cliente recibe "¿Qué tal tu visita?". Solo una vez por cliente (por email), nunca de noche y nunca de citas de hace más de 48 h. 0 = desactivado.
+- **Con RESENA_URL** (enlace de reseñas del perfil de empresa de Google: Perfil → Pedir reseñas → copiar enlace): el email lleva el botón "Dejar mi reseña en Google".
+- **Sin RESENA_URL**: el email lleva 5 estrellas. Al tocar una, la puntuación se guarda en la pestaña **Opiniones** y el cliente puede añadir un comentario y permitir que se publique en la web. El negocio recibe un email con cada opinión.
+- Se pide a todos los clientes por igual: Google prohíbe pedir reseñas solo a los clientes contentos.
+- La columna **Reseña** de Citas dice cuándo se pidió (o por qué no: sin email, ya pedida antes, cita antigua).
+- Prueba: menú **Creaner Citas → Enviarme una petición de opinión de prueba**.
+- Va en el mismo activador horario que los recordatorios: no hay que activar nada nuevo.
+
 ## Límites a tener en cuenta
 - Gmail gratuito: unos **100 emails al día** por cuenta. Cada cita gasta hasta 3 (aviso al negocio, confirmación y recordatorio), así que da para unas 30 citas al día. Si quedan menos de 5 envíos en el día, los recordatorios se paran para no dejar sin confirmación a las reservas nuevas.
 - Recordatorios: se envían unas RECORDATORIO_HORAS antes de la cita, nunca entre las 22:00 y las 8:00, y no a quien reservó hace menos de 6 h. En la pestaña Citas, la columna **Recordatorio** dice cuándo se envió (o "Sin email").
