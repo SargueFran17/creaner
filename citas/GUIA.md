@@ -45,22 +45,9 @@ Colores del negocio (opcional, en su CSS):
 #creaner-citas{ --cc-accent:#2f6157; --cc-soft:#eef2ef; --cc-font:"Albert Sans",sans-serif; --cc-radius:14px; }
 ```
 
-## 5. Panel del negocio
-- Dirección: `URL_DEL_PASO_3?accion=panel` (también en el menú **Creaner Citas → Ver enlace del panel**, que usa URL_WEB).
-- Si sale "No se puede abrir el archivo en estos momentos": la dirección no es la de la implementación activa, o hay varias cuentas de Google abiertas en el navegador (probar en incógnito).
-- Se entra con el **PIN_PANEL** de la pestaña Config. Que el negocio lo guarde en favoritos del móvil.
-- Desde el panel: ver la semana, cancelar citas y marcar días cerrados.
-- Si se activa CALENDARIO = SI, cada cita aparece también en el Google Calendar de la cuenta.
-
-## Actualizar un negocio que ya usa la v1.2
-1. Pega el nuevo `Code.gs` encima del antiguo y guarda.
-2. Elige la función **`activarRecordatorios`** y pulsa **Ejecutar**. Google pedirá un permiso nuevo (para crear el activador): acéptalo. Se añade sola la columna Recordatorio en Citas.
-3. Opcional: añade en Config la fila `RECORDATORIO_HORAS` (si no está, se usan 26 h).
-4. **Implementar → Gestionar implementaciones → editar → Nueva versión → Implementar**.
-
-## 5b. Páginas en la web del negocio (recomendado)
+## 5. Páginas de cita, opinión y panel en la web del negocio (siempre)
 Así el cliente nunca ve el aviso de "aplicación creada por un usuario de Google Apps Script".
-1. En la web del negocio, crea tres archivos junto al index.html: `cita.html`, `opinion.html` y `panel.html`. Cada uno lleva solo esto (cambiando `data-pagina` por `cita`, `opinion` o `panel`, y la URL /exec del paso 3):
+1. Copia los tres archivos de `citas/plantilla/` (`cita.html`, `opinion.html`, `panel.html`) junto al index.html de la web del negocio y cambia el nombre del negocio y `URL_DEL_SCRIPT`. Cada uno lleva solo esto (cambiando `data-pagina` por `cita`, `opinion` o `panel`, y la URL /exec del paso 3):
 ```html
 <!doctype html><html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow">
@@ -71,8 +58,15 @@ Así el cliente nunca ve el aviso de "aplicación creada por un usuario de Googl
 ```
 2. En Config, pon en **WEB_NEGOCIO** la dirección de la web (p. ej. `https://negocio.com/`). Desde ese momento los emails llevan a `cita.html` y `opinion.html` de la web del negocio.
 3. Menú **Creaner Citas → Ver enlace del panel**: el enlace pasa a ser `…/panel.html` y se guarda en Config (ENLACE_PANEL).
-4. Los colores, el logo y el saludo salen de Config, igual que antes. Si WEB_NEGOCIO está vacío, todo sigue funcionando con las páginas de Google.
+4. Los colores, el logo y el saludo salen de Config (COLOR_PRINCIPAL, FONDO_PANEL, LOGO_URL, SALUDO).
 5. El panel se bloquea 15 minutos tras 8 PIN incorrectos seguidos.
+6. Si WEB_NEGOCIO está vacío, todo sigue funcionando con las páginas de Google (con su aviso gris): solo como solución temporal.
+
+## 5b. Panel del negocio
+- Dirección: `WEB_NEGOCIO/panel.html` (menú **Creaner Citas → Ver enlace del panel**; queda guardada en Config → ENLACE_PANEL).
+- Se entra con el **PIN_PANEL** de la pestaña Config. Que el negocio lo guarde en favoritos del móvil.
+- Desde el panel: ver la semana, cancelar citas y marcar días cerrados.
+- Si se activa CALENDARIO = SI, cada cita aparece también en el Google Calendar de la cuenta.
 
 ## 6. Comprobar antes de entregar
 - [ ] Hacer una reserva de prueba desde la web (con tu email) y comprobar que llegan los 2 emails.
@@ -108,3 +102,12 @@ Guardamos nombre, teléfono y email de los clientes del negocio, así que Creane
 - Firmar con cada negocio un **contrato de encargo del tratamiento** (plantilla pendiente).
 - La web del negocio debe tener **política de privacidad** (enlazarla en `data-privacidad`).
 - Nunca escribir claves o PIN en el código de la web: el PIN vive solo en la hoja.
+
+## Actualizar un negocio con una versión anterior
+1. Pega el nuevo `Code.gs` encima del antiguo y guarda.
+2. Elige la función **`activarRecordatorios`** y pulsa **Ejecutar**. Google pedirá un permiso nuevo (para crear el activador): acéptalo. Se añade sola la columna Recordatorio en Citas.
+3. Opcional: añade en Config la fila `RECORDATORIO_HORAS` (si no está, se usan 26 h).
+4. Ejecuta `configurar` (crea las pestañas y columnas nuevas sin tocar lo que hay) y añade en Config las filas nuevas que quieras usar (WEB_NEGOCIO, SALUDO, FONDO_PANEL, RESENA_URL…).
+5. Sube cita.html, opinion.html y panel.html a su web (paso 5).
+6. **Implementar → Gestionar implementaciones → editar → Nueva versión → Implementar**.
+
