@@ -64,7 +64,7 @@ function configurar() {
     ['ANTELACION_MIN_HORAS', '2', 'Horas mínimas de antelación para reservar'],
     ['DIAS_VISTA', '30', 'Cuántos días hacia delante se puede reservar'],
     ['CANCELACION_HORAS', '24', 'Hasta cuántas horas antes puede cancelar el cliente'],
-    ['RECORDATORIO_HORAS', '24', 'Cuántas horas antes de la cita se envía el recordatorio al cliente. 0 = sin recordatorios'],
+    ['RECORDATORIO_HORAS', '26', 'Cuántas horas antes de la cita se envía el recordatorio al cliente. Ponlo por encima de CANCELACION_HORAS para que aún pueda cancelar desde el email. 0 = sin recordatorios'],
     ['PIN_PANEL', String(Math.floor(100000 + Math.random() * 900000)), 'PIN del panel del negocio. Cámbialo si quieres'],
     ['CALENDARIO', 'NO', 'SI = añadir cada cita al Google Calendar de esta cuenta'],
     ['URL_WEB', '', 'Dirección /exec de la implementación (Implementar → Gestionar implementaciones)'],
@@ -154,8 +154,8 @@ function leerConfig_() {
   c.ANTELACION_MIN_HORAS = parseFloat(c.ANTELACION_MIN_HORAS) || 0;
   c.DIAS_VISTA = parseInt(c.DIAS_VISTA, 10) || 30;
   c.CANCELACION_HORAS = parseFloat(c.CANCELACION_HORAS) || 0;
-  // Si la hoja es anterior a la v1.3 y no tiene el ajuste, se usan 24 h.
-  c.RECORDATORIO_HORAS = (c.RECORDATORIO_HORAS === undefined || c.RECORDATORIO_HORAS === '') ? 24 : (parseFloat(c.RECORDATORIO_HORAS) || 0);
+  // Si la hoja es anterior a la v1.3 y no tiene el ajuste, se usan 26 h (2 más que el plazo de cancelación habitual).
+  c.RECORDATORIO_HORAS = (c.RECORDATORIO_HORAS === undefined || c.RECORDATORIO_HORAS === '') ? 26 : (parseFloat(c.RECORDATORIO_HORAS) || 0);
   return c;
 }
 
@@ -536,7 +536,8 @@ function mandarRecordatorio_(cfg, tz, c, faltanH, destino) {
   var cuando = cuandoTexto_(c.fecha, tz);
   var puedeCancelar = c.token && faltanH >= cfg.CANCELACION_HORAS;
   var noPuedes = puedeCancelar
-    ? '<p>¿Al final no puedes venir? <a href="' + urlCancelar_(c.id, c.token) + '">Cancela tu cita aquí</a> y así otra persona podrá aprovechar el hueco.</p>'
+    ? '<p>¿Al final no puedes venir? <a href="' + urlCancelar_(c.id, c.token) + '">Cancela tu cita aquí</a>' +
+      (cfg.CANCELACION_HORAS ? ' (hasta ' + cfg.CANCELACION_HORAS + ' h antes)' : '') + ' y así otra persona podrá aprovechar el hueco.</p>'
     : '<p>¿Al final no puedes venir? Avísanos cuanto antes' +
       (cfg.TELEFONO_NEGOCIO ? ' llamando al <b>' + esc_(cfg.TELEFONO_NEGOCIO) + '</b> o' : '') +
       ' respondiendo a este email, y así otra persona podrá aprovechar el hueco.</p>';
@@ -556,7 +557,7 @@ function recordatorioDePrueba() {
   var serv = leerServicios_()[0] || { nombre: 'Servicio de prueba' };
   var pro = leerProfesionales_()[0] || { nombre: 'Profesional' };
   mandarRecordatorio_(cfg, tz, { id: 'PRUEBA', fecha: sumarDias_(hoy_(tz), 1), hora: '10:00', servicio: serv.nombre,
-    profesional: pro.nombre, nombre: 'Cliente de prueba', token: '' }, 24, cfg.EMAIL_NEGOCIO);
+    profesional: pro.nombre, nombre: 'Cliente de prueba', token: 'prueba' }, cfg.RECORDATORIO_HORAS || 26, cfg.EMAIL_NEGOCIO);
   SpreadsheetApp.getUi().alert('Recordatorio de prueba enviado a ' + cfg.EMAIL_NEGOCIO + '. Mira también en Spam.');
 }
 

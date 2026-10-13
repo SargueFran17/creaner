@@ -15,7 +15,7 @@ Dónde vive: **en la cuenta de Google del propio negocio** (su Gmail o uno cread
 2. Google pedirá permisos: *Revisar permisos* → elige la cuenta → *Configuración avanzada* → *Ir a … (no seguro)* → *Permitir*. (Sale "no seguro" porque el script es nuestro y no está publicado en la tienda de Google; es normal.)
 3. Vuelve a la hoja: verás las pestañas **Config, Servicios, Profesionales, Horario, Cerrados y Citas** con datos de ejemplo.
 4. Rellénalas con los datos del formulario de alta del cliente:
-   - **Config**: nombre, email, teléfono, dirección, intervalo, antelación, días visibles, horas para cancelar, horas del recordatorio (RECORDATORIO_HORAS, 24 por defecto; 0 = sin recordatorios), PIN del panel, CALENDARIO (SI/NO), URL_WEB, y los colores de la marca (COLOR_PRINCIPAL, COLOR_ACENTO) y LOGO_URL opcional. Los colores se aplican al panel, a los emails y a la página de cancelar.
+   - **Config**: nombre, email, teléfono, dirección, intervalo, antelación, días visibles, horas para cancelar, horas del recordatorio (RECORDATORIO_HORAS, 26 por defecto para que el cliente aún pueda cancelar desde el email; 0 = sin recordatorios), PIN del panel, CALENDARIO (SI/NO), URL_WEB, y los colores de la marca (COLOR_PRINCIPAL, COLOR_ACENTO) y LOGO_URL opcional. Los colores se aplican al panel, a los emails y a la página de cancelar.
    - **Servicios**: un ID corto sin espacios (`corte-barba`), nombre, duración en minutos, precio, categoría y `SI` en Activo.
    - **Profesionales**: ID, nombre y qué servicios hace (`TODOS` o IDs separados por comas).
    - **Horario**: una fila por tramo. Turno partido = dos filas el mismo día. `TODOS` vale para todos los profesionales.
@@ -55,7 +55,7 @@ Colores del negocio (opcional, en su CSS):
 ## Actualizar un negocio que ya usa la v1.2
 1. Pega el nuevo `Code.gs` encima del antiguo y guarda.
 2. Elige la función **`activarRecordatorios`** y pulsa **Ejecutar**. Google pedirá un permiso nuevo (para crear el activador): acéptalo. Se añade sola la columna Recordatorio en Citas.
-3. Opcional: añade en Config la fila `RECORDATORIO_HORAS` (si no está, se usan 24 h).
+3. Opcional: añade en Config la fila `RECORDATORIO_HORAS` (si no está, se usan 26 h).
 4. **Implementar → Gestionar implementaciones → editar → Nueva versión → Implementar**.
 
 ## 6. Comprobar antes de entregar
