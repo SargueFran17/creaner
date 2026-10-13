@@ -70,7 +70,9 @@ function configurar() {
     ['URL_WEB', '', 'Dirección /exec de la implementación (Implementar → Gestionar implementaciones)'],
     ['COLOR_PRINCIPAL', '#0d1d38', 'Color de la marca del negocio (cabecera del panel, botones y emails). Formato #RRGGBB'],
     ['COLOR_ACENTO', '#e0b03f', 'Color secundario para detalles. Formato #RRGGBB'],
-    ['LOGO_URL', '', 'Opcional: dirección de una imagen del logo (PNG o SVG) para el panel y los emails']
+    ['LOGO_URL', '', 'Opcional: dirección de una imagen del logo (PNG o SVG) para el panel y los emails'],
+    ['SALUDO', '', 'Opcional: título del panel, p. ej. "Hola, Jorge". Vacío = nombre del negocio'],
+    ['FONDO_PANEL', '', 'Opcional: color de fondo del panel. Formato #RRGGBB']
   ]);
   crearHoja_(ss, HOJAS.servicios, ['ID', 'Nombre', 'Duración (min)', 'Precio (€)', 'Categoría', 'Activo'], [
     ['corte', 'Corte', '30', '12', 'Pelo', 'SI'],
@@ -132,11 +134,23 @@ function emailDePrueba() {
 function mostrarEnlacePanel() {
   var c = leerConfig_();
   var base = (c.URL_WEB || '').replace(/\?.*$/, '');
+  if (base) guardarAjuste_('ENLACE_PANEL', base + '?accion=panel', 'Enlace del panel del negocio (se entra con PIN_PANEL). Guárdalo en favoritos del móvil');
   var msg = base
-    ? ('Panel del negocio:\n' + base + '?accion=panel\n\nPIN: el de la pestaña Config (PIN_PANEL).')
+    ? ('Panel del negocio:\n' + base + '?accion=panel\n\nTambién lo tienes en la pestaña Config, fila ENLACE_PANEL.\nPIN: el de la pestaña Config (PIN_PANEL).')
     : 'Pega en Config → URL_WEB la dirección de tu implementación (Implementar → Gestionar implementaciones → URL que termina en /exec). ' +
       'El panel será esa dirección + ?accion=panel';
   SpreadsheetApp.getUi().alert('Creaner Citas', msg, SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+/** Crea o actualiza una fila de la pestaña Config. */
+function guardarAjuste_(clave, valor, explicacion) {
+  var sh = SpreadsheetApp.getActive().getSheetByName(HOJAS.config);
+  if (!sh) return;
+  var claves = sh.getRange(1, 1, Math.max(sh.getLastRow(), 1), 1).getDisplayValues();
+  for (var i = 1; i < claves.length; i++) {
+    if (String(claves[i][0]).trim() === clave) { sh.getRange(i + 1, 2).setValue(valor); return; }
+  }
+  sh.appendRow([clave, valor, explicacion || '']);
 }
 
 /** URL pública del script: la de Config (URL_WEB) si está; si no, la que da Google. */
@@ -639,7 +653,8 @@ function paginaCancelar_(id, token, confirmar) {
 function panelEstilo() {
   var c = leerConfig_();
   return { negocio: c.NEGOCIO || 'Citas', color: color_(c.COLOR_PRINCIPAL, '#0d1d38'),
-           acento: color_(c.COLOR_ACENTO, '#e0b03f'), logo: /^https:\/\//.test(c.LOGO_URL || '') ? c.LOGO_URL : '' };
+           acento: color_(c.COLOR_ACENTO, '#e0b03f'), logo: /^https:\/\//.test(c.LOGO_URL || '') ? c.LOGO_URL : '',
+           saludo: String(c.SALUDO || '').slice(0, 60), fondo: color_(c.FONDO_PANEL, '') };
 }
 
 function color_(v, porDefecto) { v = String(v || '').trim(); return /^#[0-9a-fA-F]{6}$/.test(v) ? v : porDefecto; }

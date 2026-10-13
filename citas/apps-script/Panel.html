@@ -67,6 +67,7 @@
 <script>
 (function(){
   var pin = '';
+  var saludo = '';
   var start = hoy();
   var main = document.getElementById('main');
   var DIAS = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
@@ -108,7 +109,7 @@
   }
 
   function pintar(data, fin){
-    document.getElementById('title').textContent = data.negocio || 'Citas';
+    document.getElementById('title').textContent = saludo || data.negocio || 'Citas';
     document.getElementById('nav').hidden = false;
     var activas = data.citas.filter(function(c){ return c.estado === 'Confirmada'; });
     document.getElementById('sum').textContent = activas.length + (activas.length === 1 ? ' cita' : ' citas') + ' en estos 7 días';
@@ -165,7 +166,9 @@
     var root = document.documentElement.style;
     root.setProperty('--accent', e.color); root.setProperty('--gold', e.acento);
     root.setProperty('--on-accent', textoSobre(e.color));
-    document.getElementById('title').textContent = e.negocio;
+    if (e.fondo) root.setProperty('--bg', e.fondo);
+    saludo = e.saludo || '';
+    document.getElementById('title').textContent = saludo || e.negocio;
     document.title = 'Panel · ' + e.negocio;
     if (e.logo) { var img = document.getElementById('logo'); img.src = e.logo; img.alt = e.negocio; img.hidden = false; }
   }
