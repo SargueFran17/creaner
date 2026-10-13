@@ -16,7 +16,8 @@
  *   ?accion=config                                  servicios, profesionales y ajustes públicos
  *   ?accion=dias&servicio=ID&profesional=ID|cualquiera   días con hueco en los próximos N días
  *   ?accion=horas&fecha=AAAA-MM-DD&servicio=ID&profesional=ID|cualquiera   horas libres
- *   ?accion=cancelar&id=ID&t=TOKEN                  página para que el cliente cancele
+ *   ?accion=cita&id=ID&t=TOKEN                      página para que el cliente cambie o cancele su cita
+ *   ?accion=cancelar&id=ID&t=TOKEN                  (antiguo) solo cancelar; se mantiene para emails ya enviados
  *   ?accion=panel                                   panel del negocio (pide PIN)
  *   POST {accion:"reservar", ...}                   crea la cita (cuerpo JSON como text/plain)
  *
@@ -24,7 +25,7 @@
  * RECORDATORIO_HORAS antes de su cita. Se instala con `configurar` o desde el menú.
  */
 
-var VERSION = '1.3';
+var VERSION = '1.4';
 var HOJAS = {
   config: 'Config',
   servicios: 'Servicios',
@@ -306,6 +307,7 @@ function doGet(e) {
       case 'config': return json_(apiConfig_());
       case 'dias': return json_(apiDias_(q.servicio, q.profesional || 'cualquiera'));
       case 'horas': return json_(apiHoras_(q.fecha, q.servicio, q.profesional || 'cualquiera'));
+      case 'cita': return paginaCita_(q.id, q.t);
       case 'cancelar': return paginaCancelar_(q.id, q.t, q.confirmar === '1');
       case 'panel': return HtmlService.createHtmlOutputFromFile('Panel')
         .setTitle('Panel de citas').addMetaTag('viewport', 'width=device-width, initial-scale=1');
@@ -435,6 +437,16 @@ function urlCancelar_(id, token) {
   return urlWeb_() + '?accion=cancelar&id=' + encodeURIComponent(id) + '&t=' + token;
 }
 
+/** Página donde el cliente cambia o cancela su cita. */
+function urlGestion_(id, token) {
+  return urlWeb_() + '?accion=cita&id=' + encodeURIComponent(id) + '&t=' + token;
+}
+
+function lineaGestion_(cfg, url, texto) {
+  return '<p>' + texto + ' <a href="' + url + '">Cambia o cancela tu cita aquí</a>' +
+    (cfg.CANCELACION_HORAS ? ' (hasta ' + cfg.CANCELACION_HORAS + ' h antes)' : '') + '.</p>';
+}
+
 function avisar_(cfg, c, token) {
   var linea = lineaCita_(c.servicio, c.profesional, c.fecha, c.hora);
   try {
@@ -446,7 +458,7 @@ function avisar_(cfg, c, token) {
     });
   } catch (x) { console.error('Aviso al negocio', x); }
   if (!c.email) return;
-  var url = urlCancelar_(c.id, token);
+  var url = urlGestion_(c.id, token);
   try {
     MailApp.sendEmail({
       to: c.email, name: cfg.NEGOCIO, replyTo: cfg.EMAIL_NEGOCIO,
@@ -454,8 +466,7 @@ function avisar_(cfg, c, token) {
       htmlBody: plantilla_('¡Cita confirmada!', '<p>Hola ' + esc_(c.nombre) + ',</p>' + linea +
         (cfg.DIRECCION ? '<p>📍 ' + esc_(cfg.DIRECCION) + '</p>' : '') +
         (cfg.TELEFONO_NEGOCIO ? '<p>📞 ' + esc_(cfg.TELEFONO_NEGOCIO) + '</p>' : '') +
-        '<p>¿No puedes venir? <a href="' + url + '">Cancela tu cita aquí</a>' +
-        (cfg.CANCELACION_HORAS ? ' (hasta ' + cfg.CANCELACION_HORAS + ' h antes)' : '') + '.</p>')
+        lineaGestion_(cfg, url, '¿Te ha surgido algo?'))
     });
   } catch (x) { console.error('Confirmación al cliente', x); }
 }
@@ -567,8 +578,7 @@ function mandarRecordatorio_(cfg, tz, c, faltanH, destino) {
   var cuando = cuandoTexto_(c.fecha, tz);
   var puedeCancelar = c.token && faltanH >= cfg.CANCELACION_HORAS;
   var noPuedes = puedeCancelar
-    ? '<p>¿Al final no puedes venir? <a href="' + urlCancelar_(c.id, c.token) + '">Cancela tu cita aquí</a>' +
-      (cfg.CANCELACION_HORAS ? ' (hasta ' + cfg.CANCELACION_HORAS + ' h antes)' : '') + ' y así otra persona podrá aprovechar el hueco.</p>'
+    ? lineaGestion_(cfg, urlGestion_(c.id, c.token), '¿Al final no te viene bien?')
     : '<p>¿Al final no puedes venir? Avísanos cuanto antes' +
       (cfg.TELEFONO_NEGOCIO ? ' llamando al <b>' + esc_(cfg.TELEFONO_NEGOCIO) + '</b> o' : '') +
       ' respondiendo a este email, y así otra persona podrá aprovechar el hueco.</p>';
@@ -596,6 +606,215 @@ function recordatorioDePrueba() {
 function avisoConfig_(c) {
   return c.EMAIL_CONFIG_VACIO ? '\n\nOjo: en Config no hay un EMAIL_NEGOCIO válido, así que se ha usado el de esta cuenta. Escríbelo en Config para que los avisos lleguen al email correcto.' : '';
 }
+
+/* ======================= CAMBIAR O CANCELAR (PÁGINA DEL CLIENTE) ======================= */
+/* ?accion=cita muestra la cita y deja cambiar día/hora o cancelar. La página llama a
+   citaDias / citaHoras / citaCambiar / citaCancelar con google.script.run; todas
+   comprueban el token de la cita. El cambio se hace en la misma fila y dentro de un
+   bloqueo: la hora antigua solo se libera cuando la nueva ya está guardada. */
+
+function validarCita_(id, token) {
+  var f = id ? buscarCita_(String(id)) : null;
+  if (!f || !token || f.r[14] !== String(token)) throw new Error('Enlace no válido.');
+  if (String(f.r[13]).trim() !== 'Confirmada') throw new Error('Esta cita ya no está activa.');
+  return f;
+}
+
+function horasHastaCita_(f, tz) {
+  var inicio = Utilities.parseDate(normFecha_(f.r[2]) + ' ' + f.r[3], tz, 'yyyy-MM-dd HH:mm');
+  return (inicio.getTime() - Date.now()) / 3600000;
+}
+
+function exigirPlazo_(f, cfg, tz) {
+  if (horasHastaCita_(f, tz) < cfg.CANCELACION_HORAS) {
+    throw new Error('Faltan menos de ' + cfg.CANCELACION_HORAS + ' h para tu cita y ya no se puede cambiar online. Llama al ' + (cfg.TELEFONO_NEGOCIO || 'negocio') + '.');
+  }
+}
+
+/** Contexto de disponibilidad sin contar la propia cita (para poder moverla a un hueco que la solape). */
+function contextoSinCita_(f) {
+  var ctx = contexto_();
+  var fecha = normFecha_(f.r[2]), lista = ctx.occ[fecha] && ctx.occ[fecha][f.r[7]];
+  if (lista) {
+    var ini = aMin_(f.r[3]), fin = aMin_(f.r[4]), quitada = false;
+    ctx.occ[fecha][f.r[7]] = lista.filter(function (o) {
+      if (!quitada && o[0] === ini && o[1] === fin) { quitada = true; return false; }
+      return true;
+    });
+  }
+  return ctx;
+}
+
+/** Mismo profesional si sigue activo; si no, cualquiera que haga el servicio. */
+function proParaCambio_(f, ctx) {
+  return ctx.pros.some(function (p) { return p.id === f.r[7]; }) ? f.r[7] : 'cualquiera';
+}
+
+function citaDias(id, token) {
+  var cfg = leerConfig_(), tz = tz_(), f = validarCita_(id, token);
+  exigirPlazo_(f, cfg, tz);
+  var ctx = contextoSinCita_(f), pro = proParaCambio_(f, ctx), hoy = hoy_(tz), out = [];
+  for (var i = 0; i < cfg.DIAS_VISTA; i++) {
+    var d = sumarDias_(hoy, i);
+    if (huecos_(d, f.r[5], pro, ctx).length) out.push({ fecha: d, txt: fechaBonita_(d) });
+  }
+  return out;
+}
+
+function citaHoras(id, token, fecha) {
+  var cfg = leerConfig_(), tz = tz_(), f = validarCita_(id, token);
+  exigirPlazo_(f, cfg, tz);
+  fecha = normFecha_(fecha);
+  if (!fecha) throw new Error('Fecha no válida.');
+  var ctx = contextoSinCita_(f), actual = normFecha_(f.r[2]) + ' ' + f.r[3];
+  return huecos_(fecha, f.r[5], proParaCambio_(f, ctx), ctx)
+    .filter(function (h) { return fecha + ' ' + h.hora !== actual; })
+    .map(function (h) { return h.hora; });
+}
+
+function citaCambiar(id, token, fecha, hora) {
+  var cfg = leerConfig_(), tz = tz_();
+  fecha = normFecha_(fecha); hora = String(hora || '').trim();
+  if (!fecha || !/^\d{2}:\d{2}$/.test(hora)) throw new Error('Elige día y hora.');
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(15000)) throw new Error('Mucha gente reservando a la vez. Inténtalo en unos segundos.');
+  try {
+    var f = validarCita_(id, token); // se vuelve a leer dentro del bloqueo
+    exigirPlazo_(f, cfg, tz);
+    var ctx = contextoSinCita_(f);
+    var serv = ctx.servicios.filter(function (x) { return x.id === f.r[5]; })[0];
+    if (!serv) throw new Error('Este servicio ya no se puede reservar online. Llama al ' + (cfg.TELEFONO_NEGOCIO || 'negocio') + '.');
+    var libre = huecos_(fecha, serv.id, proParaCambio_(f, ctx), ctx).filter(function (h) { return h.hora === hora; })[0];
+    if (!libre) return { ok: false, ocupada: true, error: 'Justo se ha ocupado esa hora. Elige otra, por favor.' };
+
+    var antes = { fecha: normFecha_(f.r[2]), hora: f.r[3] };
+    var fin = aHora_(aMin_(hora) + serv.duracion);
+    f.sh.getRange(f.fila, 3, 1, 3).setValues([[fecha, hora, fin]]);
+    f.sh.getRange(f.fila, 8, 1, 2).setValues([[libre.profesional, libre.profesionalNombre]]);
+    if (f.sh.getMaxColumns() >= COL_RECORDATORIO) f.sh.getRange(f.fila, COL_RECORDATORIO).setValue(''); // nuevo recordatorio para la nueva hora
+    if (f.r[15]) {
+      try {
+        var ev = CalendarApp.getDefaultCalendar().getEventById(f.r[15]);
+        if (ev) ev.setTime(Utilities.parseDate(fecha + ' ' + hora, tz, 'yyyy-MM-dd HH:mm'), Utilities.parseDate(fecha + ' ' + fin, tz, 'yyyy-MM-dd HH:mm'));
+      } catch (x) {}
+    }
+    SpreadsheetApp.flush();
+    avisarCambio_(cfg, f.r, antes, { fecha: fecha, hora: hora, profesional: libre.profesionalNombre }, token);
+    return { ok: true, txt: fechaBonita_(fecha) + ' a las ' + hora, profesional: libre.profesionalNombre };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function citaCancelar(id, token) {
+  var cfg = leerConfig_(), tz = tz_();
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(15000)) throw new Error('Inténtalo de nuevo en unos segundos.');
+  try {
+    var f = validarCita_(id, token);
+    exigirPlazo_(f, cfg, tz);
+    cancelarFila_(f, cfg);
+    return true;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function avisarCambio_(cfg, r, antes, nueva, token) {
+  var de = esc_(fechaBonita_(antes.fecha)) + ' a las ' + esc_(antes.hora);
+  try {
+    MailApp.sendEmail({
+      to: cfg.EMAIL_NEGOCIO, name: 'Reservas ' + (cfg.NEGOCIO || ''), replyTo: r[11] || undefined,
+      subject: 'Cita cambiada: ' + r[6] + ' · ahora ' + fechaBonita_(nueva.fecha) + ' ' + nueva.hora,
+      htmlBody: plantilla_('Cita cambiada', '<p>' + esc_(r[9]) + ' (' + esc_(r[10]) + ') ha cambiado su cita de <b>' + esc_(r[6]) + '</b>.</p>' +
+        '<p>Antes: <s>' + de + '</s><br>Ahora: <b>' + esc_(fechaBonita_(nueva.fecha)) + ' a las ' + esc_(nueva.hora) + '</b> con ' + esc_(nueva.profesional) + '</p>')
+    });
+  } catch (x) { console.error('Aviso de cambio al negocio', x); }
+  if (!r[11]) return;
+  try {
+    MailApp.sendEmail({
+      to: r[11], name: cfg.NEGOCIO, replyTo: cfg.EMAIL_NEGOCIO,
+      subject: 'Tu cita en ' + cfg.NEGOCIO + ' se ha cambiado',
+      htmlBody: plantilla_('Cita cambiada', '<p>Hola ' + esc_(r[9]) + ',</p><p>Tu cita queda así:</p>' +
+        lineaCita_(r[6], nueva.profesional, nueva.fecha, nueva.hora) +
+        (cfg.DIRECCION ? '<p>📍 ' + esc_(cfg.DIRECCION) + '</p>' : '') +
+        lineaGestion_(cfg, urlGestion_(r[0], token), '¿Necesitas cambiarla otra vez?'))
+    });
+  } catch (x) { console.error('Confirmación de cambio al cliente', x); }
+}
+
+function paginaCita_(id, token) {
+  var cfg = leerConfig_(), tz = tz_();
+  var col = color_(cfg.COLOR_PRINCIPAL, '#1c1f24'), fondo = color_(cfg.FONDO_PANEL, '#f4f5f7');
+  var f = id ? buscarCita_(String(id)) : null;
+  var datos;
+  if (!f || !token || f.r[14] !== String(token)) datos = { estado: 'invalido' };
+  else if (String(f.r[13]).trim() !== 'Confirmada') datos = { estado: 'cancelada' };
+  else {
+    var faltan = horasHastaCita_(f, tz);
+    datos = { estado: faltan <= 0 ? 'pasada' : (faltan < cfg.CANCELACION_HORAS ? 'tarde' : 'ok'),
+      id: f.r[0], t: f.r[14], servicio: f.r[6], profesional: f.r[8], nombre: f.r[9],
+      txt: fechaBonita_(normFecha_(f.r[2])) + ' a las ' + f.r[3] };
+  }
+  datos.negocio = cfg.NEGOCIO || ''; datos.telefono = cfg.TELEFONO_NEGOCIO || ''; datos.horas = cfg.CANCELACION_HORAS;
+  var logo = /^https:\/\//.test(cfg.LOGO_URL || '') ? cfg.LOGO_URL : '';
+  var html = HTML_CITA_
+    .replace(/__COLOR__/g, col).replace(/__FONDO__/g, fondo)
+    .replace('__LOGO__', logo ? '<img src="' + esc_(logo) + '" alt="" style="max-height:44px;max-width:200px;display:block;margin:0 auto 10px">' : '')
+    .replace('__DATOS__', JSON.stringify(datos).replace(/</g, '\\u003c'));
+  return HtmlService.createHtmlOutput(html).setTitle('Tu cita · ' + (cfg.NEGOCIO || ''))
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+var HTML_CITA_ = '<!doctype html><html lang="es"><head><base target="_top"><meta charset="utf-8"><style>' +
+  '*{box-sizing:border-box}body{margin:0;background:__FONDO__;color:#1c1f24;font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}' +
+  '.w{max-width:480px;margin:0 auto;padding:28px 16px 48px}.neg{text-align:center;color:#6b7280;font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 14px}' +
+  '.card{background:#fff;border:1px solid #e3e6ea;border-radius:16px;padding:20px}h1{font-size:22px;margin:0 0 6px}' +
+  '.cita{background:__FONDO__;border-radius:12px;padding:12px 14px;margin:14px 0}.cita b{display:block}' +
+  '.btn{display:block;width:100%;border:0;border-radius:999px;background:__COLOR__;color:#fff;font:inherit;font-weight:600;padding:13px;min-height:48px;cursor:pointer;margin-top:10px}' +
+  '.btn.sec{background:transparent;color:#1c1f24;box-shadow:inset 0 0 0 1px #cfd4da}.btn:disabled{opacity:.5;cursor:wait}' +
+  '.lbl{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#6b7280;margin:16px 0 8px}' +
+  '.dias{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px}.dia{flex:0 0 64px;border:1px solid #dde1e7;background:#fff;border-radius:12px;padding:8px 0;text-align:center;font:inherit;font-size:12px;cursor:pointer}' +
+  '.dia b{display:block;font-size:18px}.horas{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:6px}' +
+  '.hora{border:1px solid #dde1e7;background:#fff;border-radius:10px;padding:10px 0;font:inherit;cursor:pointer;min-height:44px}' +
+  '.sel{background:__COLOR__!important;border-color:__COLOR__!important;color:#fff}.err{color:#a2463a;font-size:14px;min-height:1em;margin:10px 0 0}' +
+  '.muted{color:#6b7280;font-size:14px}a{color:inherit}' +
+  '</style></head><body><div class="w">__LOGO__<p class="neg" id="neg"></p><div class="card" id="app"></div></div><script>' +
+  '(function(){var D=__DATOS__,app=document.getElementById("app"),sel={};' +
+  'document.getElementById("neg").textContent=D.negocio;' +
+  'function e(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\\"":"&quot;"}[c]})}' +
+  'var tel=D.telefono?\' Llama al <a href="tel:\'+e(D.telefono.replace(/\\s/g,""))+\'"><b>\'+e(D.telefono)+"</b></a>.":"";' +
+  'var caja=function(){return \'<div class="cita"><b>\'+e(D.servicio)+"</b>con "+e(D.profesional)+"<br>"+e(D.txt)+"</div>"};' +
+  'function run(fn,args,ok){var r=google.script.run.withSuccessHandler(ok).withFailureHandler(function(x){err(x.message||String(x))});r[fn].apply(r,args)}' +
+  'function err(m){var n=document.getElementById("err");if(n)n.textContent=m;else app.innerHTML="<h1>No se ha podido</h1><p>"+e(m)+"</p>";' +
+  'Array.prototype.forEach.call(app.querySelectorAll("button"),function(b){b.disabled=false})}' +
+  'function inicio(){if(D.estado==="invalido"){app.innerHTML="<h1>Enlace no válido</h1><p class=muted>No encontramos esta cita.</p>";return}' +
+  'if(D.estado==="cancelada"){app.innerHTML="<h1>Cita cancelada</h1><p class=muted>Esta cita ya está cancelada.</p>";return}' +
+  'if(D.estado==="pasada"){app.innerHTML="<h1>Esta cita ya ha pasado</h1>"+caja();return}' +
+  'if(D.estado==="tarde"){app.innerHTML="<h1>Tu cita</h1>"+caja()+"<p>Faltan menos de "+e(D.horas)+" h y ya no se puede cambiar ni cancelar online."+tel+"</p>";return}' +
+  'app.innerHTML="<h1>Hola, "+e(D.nombre)+"</h1><p class=muted>Esta es tu cita:</p>"+caja()+' +
+  '\'<button class="btn" id="bc">Cambiar día u hora</button><button class="btn sec" id="bx">Cancelar la cita</button><p class="err" id="err"></p>\';' +
+  'document.getElementById("bc").onclick=dias;document.getElementById("bx").onclick=confirmarCancelar}' +
+  'function dias(){this&&(this.disabled=true);run("citaDias",[D.id,D.t],function(l){sel={};' +
+  'if(!l.length){app.innerHTML="<h1>Sin huecos</h1><p>No quedan huecos libres en los próximos días."+tel+\'</p><button class="btn sec" id="vol">Volver</button>\';document.getElementById("vol").onclick=inicio;return}' +
+  'var DS=["dom","lun","mar","mié","jue","vie","sáb"];' +
+  'app.innerHTML="<h1>Elige el nuevo día</h1>"+caja()+\'<p class="lbl">Día</p><div class="dias">\'+l.map(function(d){var p=d.fecha.split("-"),x=new Date(+p[0],p[1]-1,+p[2]);' +
+  'return \'<button class="dia" data-f="\'+d.fecha+\'" title="\'+e(d.txt)+\'">\'+DS[x.getDay()]+"<b>"+x.getDate()+"</b></button>"}).join("")+' +
+  '\'</div><div id="hs"></div><button class="btn" id="ok" disabled>Confirmar el cambio</button><button class="btn sec" id="vol">Volver</button><p class="err" id="err"></p>\';' +
+  'document.getElementById("vol").onclick=inicio;document.getElementById("ok").onclick=cambiar;' +
+  'Array.prototype.forEach.call(app.querySelectorAll(".dia"),function(b){b.onclick=function(){horas(b)}})})}' +
+  'function horas(b){Array.prototype.forEach.call(app.querySelectorAll(".dia"),function(x){x.classList.toggle("sel",x===b)});sel={fecha:b.getAttribute("data-f"),txt:b.title};' +
+  'document.getElementById("ok").disabled=true;var hs=document.getElementById("hs");hs.innerHTML=\'<p class="muted">Buscando horas…</p>\';' +
+  'run("citaHoras",[D.id,D.t,sel.fecha],function(l){hs.innerHTML=\'<p class="lbl">Hora</p><div class="horas">\'+l.map(function(h){return \'<button class="hora">\'+h+"</button>"}).join("")+"</div>";' +
+  'Array.prototype.forEach.call(hs.querySelectorAll(".hora"),function(h){h.onclick=function(){Array.prototype.forEach.call(hs.querySelectorAll(".hora"),function(x){x.classList.toggle("sel",x===h)});' +
+  'sel.hora=h.textContent;var ok=document.getElementById("ok");ok.disabled=false;ok.textContent="Cambiar al "+sel.txt+" a las "+sel.hora}})})}' +
+  'function cambiar(){var ok=document.getElementById("ok");ok.disabled=true;ok.textContent="Guardando…";' +
+  'run("citaCambiar",[D.id,D.t,sel.fecha,sel.hora],function(r){if(!r.ok){err(r.error);var b=app.querySelector(".dia.sel");if(b)horas(b);return}' +
+  'D.txt=r.txt;D.profesional=r.profesional;app.innerHTML="<h1>¡Cita cambiada!</h1>"+caja()+"<p class=muted>Te hemos enviado la confirmación por email. ¡Te esperamos!</p>"})}' +
+  'function confirmarCancelar(){app.innerHTML="<h1>¿Cancelar tu cita?</h1>"+caja()+\'<button class="btn" id="si">Sí, cancelar la cita</button><button class="btn sec" id="no">No, mantenerla</button><p class="err" id="err"></p>\';' +
+  'document.getElementById("no").onclick=inicio;document.getElementById("si").onclick=function(){this.disabled=true;this.textContent="Cancelando…";' +
+  'run("citaCancelar",[D.id,D.t],function(){app.innerHTML="<h1>Cita cancelada</h1>"+caja()+"<p class=muted>Hemos avisado a "+e(D.negocio)+". ¡Gracias por avisar!</p>"})}}' +
+  'inicio()})();</script></body></html>';
 
 /* ============================ CANCELACIÓN POR EL CLIENTE ============================ */
 

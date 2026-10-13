@@ -61,9 +61,16 @@ Colores del negocio (opcional, en su CSS):
 ## 6. Comprobar antes de entregar
 - [ ] Hacer una reserva de prueba desde la web (con tu email) y comprobar que llegan los 2 emails.
 - [ ] Comprobar que existe el activador `enviarRecordatorios` y que el recordatorio de prueba llega bien.
-- [ ] Probar el enlace de cancelación del email.
+- [ ] Abrir el enlace "Cambia o cancela tu cita aquí" del email: cambiar la cita a otra hora y comprobar que la fila de Citas se actualiza y llegan los avisos; después, cancelarla.
 - [ ] Entrar al panel con el PIN y ver la cita.
 - [ ] Borrar la fila de prueba de la pestaña Citas.
+
+## Cambiar o cancelar (cliente)
+- Los emails de confirmación y recordatorio llevan el enlace **Cambia o cancela tu cita aquí** (`URL_WEB?accion=cita&id=…&t=…`).
+- El cliente ve su cita y puede elegir otro día y hora (mismo servicio y profesional) o cancelarla, hasta CANCELACION_HORAS antes.
+- El cambio se guarda en la misma fila: la hora antigua solo se libera cuando la nueva está guardada. Si había evento en Calendar, se mueve. El recordatorio se vuelve a enviar para la nueva hora.
+- El negocio recibe un email con la hora antigua y la nueva; el cliente, la confirmación del cambio.
+- Los enlaces antiguos de "Cancela tu cita aquí" siguen funcionando.
 
 ## Límites a tener en cuenta
 - Gmail gratuito: unos **100 emails al día** por cuenta. Cada cita gasta hasta 3 (aviso al negocio, confirmación y recordatorio), así que da para unas 30 citas al día. Si quedan menos de 5 envíos en el día, los recordatorios se paran para no dejar sin confirmación a las reservas nuevas.
