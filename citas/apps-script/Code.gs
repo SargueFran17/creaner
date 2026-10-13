@@ -20,12 +20,14 @@
  *   ?accion=cancelar&id=ID&t=TOKEN                  (antiguo) solo cancelar; se mantiene para emails ya enviados
  *   ?accion=panel                                   panel del negocio (pide PIN)
  *   POST {accion:"reservar", ...}                   crea la cita (cuerpo JSON como text/plain)
+ *   POST {accion:"estilo"|"cita_*"|"opinion"|"panel_*", ...}  API de las páginas de la web del negocio
+ *        (cita.html, opinion.html, panel.html con https://creaner.es/citas/paginas.js). Ver api_().
  *
  * Recordatorios: un activador horario (enviarRecordatorios) manda un email al cliente
  * RECORDATORIO_HORAS antes de su cita. Se instala con `configurar` o desde el menú.
  */
 
-var VERSION = '1.5.1';
+var VERSION = '1.6';
 var HOJAS = {
   config: 'Config',
   servicios: 'Servicios',
@@ -78,6 +80,7 @@ function configurar() {
     ['LOGO_URL', '', 'Opcional: dirección de una imagen del logo (PNG o SVG) para el panel y los emails'],
     ['SALUDO', '', 'Opcional: título del panel, p. ej. "Hola, Jorge". Vacío = nombre del negocio'],
     ['FONDO_PANEL', '', 'Opcional: color de fondo del panel. Formato #RRGGBB'],
+    ['WEB_NEGOCIO', '', 'Dirección de la web del negocio (p. ej. https://negocio.com/). Si tiene cita.html, opinion.html y panel.html, los enlaces llevan allí en vez de a Google'],
     ['RESENA_URL', '', 'Enlace para dejar reseña en Google (perfil de empresa → Pedir reseñas). Vacío = el cliente puntúa en una página propia y se guarda en Opiniones'],
     ['RESENA_HORAS', '2', 'Horas después de la cita para pedir la opinión. 0 = no pedir opiniones']
   ]);
@@ -142,9 +145,11 @@ function emailDePrueba() {
 function mostrarEnlacePanel() {
   var c = leerConfig_();
   var base = (c.URL_WEB || '').replace(/\?.*$/, '');
-  if (base) guardarAjuste_('ENLACE_PANEL', base + '?accion=panel', 'Enlace del panel del negocio (se entra con PIN_PANEL). Guárdalo en favoritos del móvil');
-  var msg = base
-    ? ('Panel del negocio:\n' + base + '?accion=panel\n\nTambién lo tienes en la pestaña Config, fila ENLACE_PANEL.\nPIN: el de la pestaña Config (PIN_PANEL).')
+  var web = webNegocio_(c);
+  var enlace = web ? web + 'panel.html' : (base ? base + '?accion=panel' : '');
+  if (enlace) guardarAjuste_('ENLACE_PANEL', enlace, 'Enlace del panel del negocio (se entra con PIN_PANEL). Guárdalo en favoritos del móvil');
+  var msg = enlace
+    ? ('Panel del negocio:\n' + enlace + '\n\nTambién lo tienes en la pestaña Config, fila ENLACE_PANEL.\nPIN: el de la pestaña Config (PIN_PANEL).')
     : 'Pega en Config → URL_WEB la dirección de tu implementación (Implementar → Gestionar implementaciones → URL que termina en /exec). ' +
       'El panel será esa dirección + ?accion=panel';
   SpreadsheetApp.getUi().alert('Creaner Citas', msg, SpreadsheetApp.getUi().ButtonSet.OK);
@@ -331,7 +336,45 @@ function doPost(e) {
   var datos = {};
   try { datos = JSON.parse(e.postData.contents || '{}'); } catch (x) { return json_({ ok: false, error: 'Datos no válidos.' }); }
   if (datos.accion === 'reservar') return json_(reservar_(datos));
-  return json_({ ok: false, error: 'Acción no reconocida.' });
+  try {
+    var r = api_(datos);
+    return json_(r === undefined ? { ok: false, error: 'Acción no reconocida.' } : r);
+  } catch (err) {
+    return json_({ ok: false, error: err.message });
+  }
+}
+
+/** API de las páginas alojadas en la web del negocio (paginas.js). Todo por POST para no dejar PIN ni tokens en URLs de registros. */
+function api_(d) {
+  switch (d.accion) {
+    case 'estilo':
+      var e = panelEstilo(), c = leerConfig_();
+      e.ok = true; e.telefono = c.TELEFONO_NEGOCIO || ''; e.horas = c.CANCELACION_HORAS;
+      return e;
+    case 'cita_info': return { ok: true, cita: datosCita_(d.id, d.t) };
+    case 'cita_dias': return { ok: true, dias: citaDias(d.id, d.t) };
+    case 'cita_horas': return { ok: true, horas: citaHoras(d.id, d.t, d.fecha) };
+    case 'cita_cambiar': return citaCambiar(d.id, d.t, d.fecha, d.hora);
+    case 'cita_cancelar': citaCancelar(d.id, d.t); return { ok: true };
+    case 'opinion':
+      if (d.comentario === undefined) return registrarPuntuacion_(d.id, d.t, d.n);
+      guardarOpinion(d.id, d.t, d.n, d.comentario, d.publicar); return { ok: true };
+    case 'panel_citas': return conPin_(d.pin, function () { return { ok: true, datos: panelCitas(d.pin, d.desde, d.hasta) }; });
+    case 'panel_cancelar': return conPin_(d.pin, function () { panelCancelar(d.pin, d.id); return { ok: true }; });
+    case 'panel_cerrar': return conPin_(d.pin, function () { panelCerrar(d.pin, d.desde, d.hasta, d.motivo); return { ok: true }; });
+  }
+}
+
+/** Frena a quien pruebe PINs: tras 8 fallos en 15 min, el panel se bloquea 15 min. */
+function conPin_(pin, fn) {
+  var cache = CacheService.getScriptCache(), fallos = parseInt(cache.get('pin_fallos') || '0', 10);
+  if (fallos >= 8) return { ok: false, bloqueado: true, error: 'Demasiados intentos. Espera 15 minutos.' };
+  try {
+    return fn();
+  } catch (err) {
+    if (/PIN/.test(err.message)) { cache.put('pin_fallos', String(fallos + 1), 900); return { ok: false, pin: true, error: 'PIN incorrecto.' }; }
+    throw err;
+  }
 }
 
 function json_(obj) {
@@ -448,7 +491,16 @@ function urlCancelar_(id, token) {
 
 /** Página donde el cliente cambia o cancela su cita. */
 function urlGestion_(id, token) {
+  var web = webNegocio_();
+  if (web) return web + 'cita.html?id=' + encodeURIComponent(id) + '&t=' + token;
   return urlWeb_() + '?accion=cita&id=' + encodeURIComponent(id) + '&t=' + token;
+}
+
+/** Web del negocio con / final, o '' si no está configurada. */
+function webNegocio_(cfg) {
+  var w = String((cfg || leerConfig_()).WEB_NEGOCIO || '').trim().replace(/[?#].*$/, '').replace(/[^\/]+\.html?$/i, '');
+  if (!/^https:\/\/[^\s]+$/.test(w)) return '';
+  return /\/$/.test(w) ? w : w + '/';
 }
 
 function lineaGestion_(cfg, url, texto) {
@@ -762,9 +814,9 @@ function avisarCambio_(cfg, r, antes, nueva, token) {
   } catch (x) { console.error('Confirmación de cambio al cliente', x); }
 }
 
-function paginaCita_(id, token) {
+/** Estado de una cita para la página del cliente (sin datos si el token no coincide). */
+function datosCita_(id, token) {
   var cfg = leerConfig_(), tz = tz_();
-  var col = color_(cfg.COLOR_PRINCIPAL, '#1c1f24'), fondo = color_(cfg.FONDO_PANEL, '#f4f5f7');
   var f = id ? buscarCita_(String(id)) : null;
   var datos;
   if (!f || !token || f.r[14] !== String(token)) datos = { estado: 'invalido' };
@@ -776,6 +828,13 @@ function paginaCita_(id, token) {
       txt: fechaBonita_(normFecha_(f.r[2])) + ' a las ' + f.r[3] };
   }
   datos.negocio = cfg.NEGOCIO || ''; datos.telefono = cfg.TELEFONO_NEGOCIO || ''; datos.horas = cfg.CANCELACION_HORAS;
+  return datos;
+}
+
+function paginaCita_(id, token) {
+  var cfg = leerConfig_();
+  var col = color_(cfg.COLOR_PRINCIPAL, '#1c1f24'), fondo = color_(cfg.FONDO_PANEL, '#f4f5f7');
+  var datos = datosCita_(id, token);
   var logo = /^https:\/\//.test(cfg.LOGO_URL || '') ? cfg.LOGO_URL : '';
   var html = HTML_CITA_
     .replace(/__COLOR__/g, col).replace(/__FONDO__/g, fondo)
@@ -879,7 +938,8 @@ function mandarPeticionOpinion_(cfg, c, destino) {
     cuerpo += '<p>Si tienes un minuto, tu reseña en Google nos ayuda muchísimo a que más gente nos conozca:</p>' +
       '<p><a href="' + esc_(cfg.RESENA_URL) + '" style="display:inline-block;background:' + col + ';color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:bold">Dejar mi reseña en Google</a></p>';
   } else {
-    var base = urlWeb_() + '?accion=opinion&id=' + encodeURIComponent(c.id) + '&t=' + c.token + '&n=';
+    var web = webNegocio_(cfg);
+    var base = (web ? web + 'opinion.html?id=' : urlWeb_() + '?accion=opinion&id=') + encodeURIComponent(c.id) + '&t=' + c.token + '&n=';
     var estrellas = [1, 2, 3, 4, 5].map(function (n) {
       return '<a href="' + base + n + '" style="font-size:34px;line-height:1;color:#e0a92e;text-decoration:none;padding:0 3px" title="' + n + ' de 5">★</a>';
     }).join('');
@@ -929,11 +989,11 @@ function avisarOpinion_(cfg, r, n, comentario) {
 }
 
 /** Página a la que llevan las estrellas del email: guarda la puntuación al momento y deja añadir un comentario. */
-function paginaOpinion_(id, token, n) {
-  var cfg = leerConfig_();
-  var f = citaPorToken_(id, token);
+/** Guarda la puntuación de una estrella del email (la primera vez avisa al negocio). */
+function registrarPuntuacion_(id, token, n) {
+  var cfg = leerConfig_(), f = citaPorToken_(id, token);
   n = Math.max(1, Math.min(5, parseInt(n, 10) || 0));
-  var datos = { negocio: cfg.NEGOCIO || '', valido: !!f, n: n };
+  var datos = { ok: true, negocio: cfg.NEGOCIO || '', valido: !!f, n: n };
   if (f) {
     var lock = LockService.getScriptLock(); lock.tryLock(10000);
     var nueva;
@@ -941,6 +1001,12 @@ function paginaOpinion_(id, token, n) {
     if (nueva) avisarOpinion_(cfg, f.r, n, '');
     datos.id = f.r[0]; datos.t = f.r[14]; datos.nombre = f.r[9]; datos.profesional = f.r[8];
   }
+  return datos;
+}
+
+function paginaOpinion_(id, token, n) {
+  var cfg = leerConfig_();
+  var datos = registrarPuntuacion_(id, token, n);
   var col = color_(cfg.COLOR_PRINCIPAL, '#1c1f24'), fondo = color_(cfg.FONDO_PANEL, '#f4f5f7');
   var logo = /^https:\/\//.test(cfg.LOGO_URL || '') ? cfg.LOGO_URL : '';
   var html = HTML_OPINION_.replace(/__COLOR__/g, col).replace(/__FONDO__/g, fondo)

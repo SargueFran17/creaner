@@ -58,6 +58,22 @@ Colores del negocio (opcional, en su CSS):
 3. Opcional: añade en Config la fila `RECORDATORIO_HORAS` (si no está, se usan 26 h).
 4. **Implementar → Gestionar implementaciones → editar → Nueva versión → Implementar**.
 
+## 5b. Páginas en la web del negocio (recomendado)
+Así el cliente nunca ve el aviso de "aplicación creada por un usuario de Google Apps Script".
+1. En la web del negocio, crea tres archivos junto al index.html: `cita.html`, `opinion.html` y `panel.html`. Cada uno lleva solo esto (cambiando `data-pagina` por `cita`, `opinion` o `panel`, y la URL /exec del paso 3):
+```html
+<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow">
+<title>Tu cita · Negocio</title></head><body>
+<div id="creaner-pagina" data-pagina="cita" data-api="URL_DEL_PASO_3"></div>
+<script src="https://creaner.es/citas/paginas.js" defer></script>
+</body></html>
+```
+2. En Config, pon en **WEB_NEGOCIO** la dirección de la web (p. ej. `https://negocio.com/`). Desde ese momento los emails llevan a `cita.html` y `opinion.html` de la web del negocio.
+3. Menú **Creaner Citas → Ver enlace del panel**: el enlace pasa a ser `…/panel.html` y se guarda en Config (ENLACE_PANEL).
+4. Los colores, el logo y el saludo salen de Config, igual que antes. Si WEB_NEGOCIO está vacío, todo sigue funcionando con las páginas de Google.
+5. El panel se bloquea 15 minutos tras 8 PIN incorrectos seguidos.
+
 ## 6. Comprobar antes de entregar
 - [ ] Hacer una reserva de prueba desde la web (con tu email) y comprobar que llegan los 2 emails.
 - [ ] Comprobar que existe el activador `enviarRecordatorios` y que el recordatorio de prueba llega bien.
