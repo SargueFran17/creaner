@@ -43,7 +43,7 @@
   var css =
     '#creaner-pagina{--cp-c:#1c1f24;--cp-on:#fff;--cp-bg:#f4f5f7;--cp-line:#e3e6ea;--cp-muted:#6b7280;--cp-bad:#a2463a;' +
     'font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#1c1f24;background:var(--cp-bg);min-height:100vh}' +
-    '#creaner-pagina *{box-sizing:border-box}' +
+    '#creaner-pagina *{box-sizing:border-box}#creaner-pagina [hidden]{display:none!important}' +
     '#creaner-pagina .cp-w{max-width:480px;margin:0 auto;padding:28px 16px 48px}' +
     '#creaner-pagina .cp-logo{display:block;max-height:46px;max-width:200px;margin:0 auto 10px}' +
     '#creaner-pagina .cp-neg{text-align:center;color:var(--cp-muted);font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 14px}' +
@@ -104,6 +104,10 @@
     '#creaner-pagina .cp-fil button[aria-pressed=true]{background:var(--cp-c);border-color:var(--cp-c);color:var(--cp-on)}' +
     '#creaner-pagina .cp-closer select{width:100%;font:inherit;font-size:16px;border:1px solid #dde1e7;border-radius:12px;padding:10px 12px;background:#fff;color:inherit}' +
     '#creaner-pagina .cp-tag.cp-off{background:#fff4e0;color:#8a5a00}' +
+    '#creaner-pagina .cp-sol-acc{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 12px}#creaner-pagina a.cp-x{text-decoration:none;display:inline-block}' +
+    '#creaner-pagina .cp-sol-ed{display:grid;grid-template-columns:1fr 1fr;gap:10px}#creaner-pagina .cp-sol-ed>*{min-width:0}#creaner-pagina .cp-sol-ed label{display:block;font-size:13px;font-weight:600;margin-bottom:4px}' +
+    '#creaner-pagina .cp-sol-ed select,#creaner-pagina .cp-sol-ed input{width:100%;font:inherit;font-size:16px;border:1px solid #dde1e7;border-radius:12px;padding:9px 11px;background:#fff;color:inherit}' +
+    '#creaner-pagina .cp-sol textarea{min-height:60px}' +
     '#creaner-pagina .cp-pin{background:#fff;border:1px solid var(--cp-line);border-radius:14px;padding:20px;max-width:360px;margin:20px auto}#creaner-pagina .cp-pin label{font-weight:600;display:block;margin-bottom:6px}';
 
   var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
@@ -115,6 +119,7 @@
   function aplicarEstilo(e) {
     E.color = e.color || E.color; E.fondo = e.fondo || E.fondo; E.negocio = e.negocio || ''; E.logo = e.logo || '';
     E.saludo = e.saludo || ''; E.telefono = e.telefono || ''; if (e.horas != null) E.horas = e.horas;
+    E.citas = e.citas !== false; E.presupuestos = !!e.presupuestos;
     root.style.setProperty('--cp-c', E.color); root.style.setProperty('--cp-on', textoSobre(E.color)); root.style.setProperty('--cp-bg', E.fondo);
     document.body.style.margin = '0'; document.body.style.background = E.fondo;
   }
@@ -244,26 +249,28 @@
     root.innerHTML = '<header class="cp-ph"><div class="cp-pw">' +
       (E.logo ? '<img src="' + esc(E.logo) + '" alt="" style="max-height:40px;max-width:200px;display:block;margin-bottom:10px">' : '') +
       '<small>Panel privado · no compartas este enlace ni el PIN</small><h1 id="cp-title">' + esc(E.saludo || E.negocio || 'Citas') + '</h1>' +
-      '<div class="cp-tabs" id="cp-tabs" role="tablist" hidden><button type="button" role="tab" id="cp-t-ag" aria-selected="true">Agenda</button>' +
-      '<button type="button" role="tab" id="cp-t-st" aria-selected="false">Estadísticas</button></div>' +
+      '<div class="cp-tabs" id="cp-tabs" role="tablist" hidden>' +
+      (E.citas ? '<button type="button" role="tab" data-v="agenda">Agenda</button>' : '') +
+      (E.presupuestos ? '<button type="button" role="tab" data-v="solicitudes">Solicitudes</button>' : '') +
+      '<button type="button" role="tab" data-v="stats">Estadísticas</button></div>' +
       '<div class="cp-nav" id="cp-nav" hidden><button type="button" id="cp-prev">‹ Anterior</button><div class="cp-rng" id="cp-rng">—</div>' +
       '<button type="button" id="cp-next">Siguiente ›</button><button type="button" id="cp-today">Hoy</button></div>' +
       '<div class="cp-sum" id="cp-sum"></div></div></header><main class="cp-pm" id="cp-main"></main>';
     var filtro = 'todos';
     try { filtro = localStorage.getItem('cp-filtro-' + API) || 'todos'; } catch (x) {}
-    var main = $('cp-main'), vista = 'agenda', mes = new Date(start.getFullYear(), start.getMonth(), 1);
+    var main = $('cp-main'), vista = E.citas ? 'agenda' : (E.presupuestos ? 'solicitudes' : 'stats'), mes = new Date(start.getFullYear(), start.getMonth(), 1);
     var MESES_L = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
     $('cp-prev').onclick = function () { if (vista === 'agenda') start = add(start, -7); else mes = new Date(mes.getFullYear(), mes.getMonth() - 1, 1); cargar(); };
     $('cp-next').onclick = function () { if (vista === 'agenda') start = add(start, 7); else mes = new Date(mes.getFullYear(), mes.getMonth() + 1, 1); cargar(); };
     $('cp-today').onclick = function () { start = hoy(); mes = new Date(start.getFullYear(), start.getMonth(), 1); cargar(); };
-    function tab(v) {
-      vista = v; $('cp-t-ag').setAttribute('aria-selected', v === 'agenda'); $('cp-t-st').setAttribute('aria-selected', v !== 'agenda');
-      $('cp-prev').textContent = v === 'agenda' ? '‹ Anterior' : '‹ Mes anterior'; $('cp-next').textContent = v === 'agenda' ? 'Siguiente ›' : 'Mes siguiente ›';
-      $('cp-today').textContent = v === 'agenda' ? 'Hoy' : 'Este mes';
-      cargar();
+    function marcarTab() {
+      cada('#cp-tabs button', function (b) { b.setAttribute('aria-selected', b.getAttribute('data-v') === vista); });
+      $('cp-prev').textContent = vista === 'agenda' ? '‹ Anterior' : '‹ Mes anterior'; $('cp-next').textContent = vista === 'agenda' ? 'Siguiente ›' : 'Mes siguiente ›';
+      $('cp-today').textContent = vista === 'agenda' ? 'Hoy' : 'Este mes';
     }
-    $('cp-t-ag').onclick = function () { tab('agenda'); };
-    $('cp-t-st').onclick = function () { tab('stats'); };
+    function tab(v) { vista = v; marcarTab(); cargar(); }
+    cada('#cp-tabs button', function (b) { b.onclick = function () { tab(b.getAttribute('data-v')); }; });
+    marcarTab();
 
     function pedirPin(msg) {
       $('cp-nav').hidden = true; $('cp-tabs').hidden = true; $('cp-sum').textContent = '';
@@ -275,6 +282,7 @@
     }
     function cargar() {
       if (vista === 'stats') return cargarStats();
+      if (vista === 'solicitudes') return cargarSolicitudes();
       var fin = add(start, 6);
       $('cp-rng').textContent = corto(start) + ' – ' + corto(fin);
       main.innerHTML = '<div class="cp-status">Cargando citas…</div>';
@@ -289,6 +297,61 @@
       body.pin = pin;
       post(body).then(function (r) { if (r.pin || r.bloqueado) { pin = ''; return pedirPin(r.error); } cargar(); })
         .catch(function (x) { $('cp-sum').textContent = 'Error: ' + x.message; });
+    }
+
+    /* ---------- Solicitudes de presupuesto ---------- */
+    var filtroSol = 'abiertas', SOL = null;
+    var COLOR_EST = { 'Nueva': '#fbe9e7;color:#a2463a', 'Contactado': '#fff4e0;color:#8a5a00', 'Presupuesto enviado': '#e8f0fe;color:#1a4fa0',
+      'Aceptado': '#e6f4ea;color:#1e6b34', 'Terminado': '#eef0f3;color:#3b4350', 'Perdido': '#f1f1f1;color:#7a7a7a' };
+    function cargarSolicitudes() {
+      $('cp-nav').hidden = true; $('cp-tabs').hidden = false;
+      main.innerHTML = '<div class="cp-status">Cargando solicitudes…</div>';
+      post({ accion: 'panel_solicitudes', pin: pin }).then(function (r) {
+        if (r.pin || r.bloqueado) { pin = ''; return pedirPin(r.bloqueado ? r.error : 'PIN incorrecto. Inténtalo de nuevo.'); }
+        SOL = r.datos; pintarSolicitudes();
+      }).catch(function (x) { main.innerHTML = '<div class="cp-status">No se han podido cargar. ' + esc(x.message) + '</div>'; });
+    }
+    function fechaCorta(f) { var p = String(f).split(' '), d = p[0].split('-'); return d.length === 3 ? (+d[2]) + ' ' + MESES[+d[1] - 1] + (p[1] ? ' · ' + p[1] : '') : f; }
+    function pintarSolicitudes() {
+      var l = SOL.solicitudes, nuevas = l.filter(function (s) { return s.estado === 'Nueva'; }).length;
+      $('cp-sum').textContent = nuevas ? nuevas + (nuevas === 1 ? ' solicitud nueva sin contestar' : ' solicitudes nuevas sin contestar') : 'Todo contestado';
+      var grupos = { abiertas: ['Nueva', 'Contactado', 'Presupuesto enviado', 'Aceptado'], terminadas: ['Terminado'], perdidas: ['Perdido'] };
+      var vis = l.filter(function (s) { return filtroSol === 'todas' || grupos[filtroSol].indexOf(s.estado) > -1; });
+      var html = '<div class="cp-fil" role="group" aria-label="Mostrar">' + [['abiertas', 'Abiertas'], ['terminadas', 'Terminadas'], ['perdidas', 'Perdidas'], ['todas', 'Todas']].map(function (x) {
+        return '<button type="button" data-s="' + x[0] + '" aria-pressed="' + (filtroSol === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>';
+      if (!vis.length) html += '<div class="cp-box cp-muted">' + (l.length ? 'No hay solicitudes en este grupo.' : 'Aún no ha llegado ninguna solicitud. Aparecerán aquí en cuanto alguien rellene el formulario de la web.') + '</div>';
+      vis.forEach(function (s) {
+        var tel = String(s.telefono).replace(/\D/g, ''), wa = 'https://wa.me/' + (tel.length === 9 ? '34' + tel : tel);
+        html += '<section class="cp-box cp-sol" data-id="' + esc(s.id) + '">' +
+          '<div class="cp-dh" style="padding:0;border:0;margin-bottom:6px"><h2 style="margin:0">' + esc(s.nombre) + '</h2>' +
+          '<span class="cp-tag" style="background:' + (COLOR_EST[s.estado] || '') + '">' + esc(s.estado) + '</span></div>' +
+          '<p class="cp-muted" style="margin:0 0 8px">' + esc(fechaCorta(s.fecha)) + ' · <b style="color:#1c1f24">' + esc(s.trabajo || 'Presupuesto') + '</b>' + (s.zona ? ' · ' + esc(s.zona) : '') + '</p>' +
+          (s.mensaje ? '<p style="margin:0 0 8px;white-space:pre-line">“' + esc(s.mensaje) + '”</p>' : '') +
+          (s.fotos.length ? '<p style="margin:0 0 8px;font-size:14px">' + s.fotos.map(function (u, i) { return '<a href="' + esc(u) + '" target="_blank" rel="noopener">Foto ' + (i + 1) + '</a>'; }).join(' · ') + '</p>' : '') +
+          '<div class="cp-sol-acc"><a class="cp-x" href="tel:' + esc(tel) + '">Llamar ' + esc(s.telefono) + '</a> <a class="cp-x" href="' + wa + '" target="_blank" rel="noopener">WhatsApp</a>' +
+          (s.email ? ' <a class="cp-x" href="mailto:' + esc(s.email) + '">Email</a>' : '') + '</div>' +
+          '<div class="cp-sol-ed"><div><label>Estado</label><select data-k="estado">' + SOL.estados.map(function (e) { return '<option' + (e === s.estado ? ' selected' : '') + '>' + esc(e) + '</option>'; }).join('') + '</select></div>' +
+          '<div><label>Importe (€)</label><input data-k="importe" type="text" inputmode="decimal" value="' + esc(s.importe) + '" placeholder="Opcional"></div>' +
+          '<div style="grid-column:1/-1"><label>Notas</label><textarea data-k="notas" rows="2" placeholder="Solo las ves tú">' + esc(s.notas) + '</textarea></div></div>' +
+          '<button type="button" class="cp-btn" data-guardar>Guardar</button><p class="cp-err" data-msg></p>' +
+          (s.opinion ? '<p class="cp-nota">Opinión: ' + esc(s.opinion) + '</p>' : '') + '</section>';
+      });
+      main.innerHTML = html;
+      cada('.cp-fil button', function (b) { b.onclick = function () { filtroSol = b.getAttribute('data-s'); pintarSolicitudes(); }; }, main);
+      cada('.cp-sol', function (card) {
+        card.querySelector('[data-guardar]').onclick = function () {
+          var b = this, msg = card.querySelector('[data-msg]'), cambios = {};
+          cada('[data-k]', function (el) { cambios[el.getAttribute('data-k')] = el.value; }, card);
+          var termina = cambios.estado === 'Terminado';
+          b.disabled = true; b.textContent = 'Guardando…';
+          post({ accion: 'panel_solicitud', pin: pin, id: card.getAttribute('data-id'), cambios: cambios }).then(function (r) {
+            if (r.pin || r.bloqueado) { pin = ''; return pedirPin(r.error); }
+            SOL.solicitudes = SOL.solicitudes.map(function (s) { return s.id === r.solicitud.id ? r.solicitud : s; });
+            pintarSolicitudes();
+            if (termina && /^Enviada/.test(r.solicitud.opinion || '')) $('cp-sum').textContent = 'Guardado. Le hemos pedido su opinión a ' + r.solicitud.nombre + '.';
+          }).catch(function (x) { b.disabled = false; b.textContent = 'Guardar'; msg.textContent = x.message; });
+        };
+      }, main);
     }
     function cargarStats() {
       var m = mes.getFullYear() + '-' + pad(mes.getMonth() + 1);
@@ -310,7 +373,33 @@
       var totalCitas = a.atendidas + a.pendientes + a.canceladas;
       var pc = totalCitas ? Math.round(a.canceladas / totalCitas * 100) : 0;
       function kpi(t, v, sub) { return '<div class="cp-kpi"><small>' + t + '</small><b>' + v + '</b><span>' + sub + '</span></div>'; }
-      var html = '<div class="cp-kpis">' +
+      function lista(t, items) {
+        if (!items.length) return '';
+        var mx = items[0].n;
+        return '<section class="cp-box"><h2>' + t + '</h2>' + items.map(function (x) {
+          return '<div class="cp-hb"><span>' + esc(x.nombre) + '</span><b>' + x.n + '</b><div class="tr"><i style="width:' + Math.round(x.n / mx * 100) + '%"></i></div></div>';
+        }).join('') + '</section>';
+      }
+      var html = '';
+      if (d.presupuestos) {
+        var q = d.presupuestos.actual, qa = d.presupuestos.anterior, difq = q.recibidas - qa.recibidas;
+        var cerradas = q.aceptadas + q.perdidas;
+        html += (d.citas ? '<h2 style="font-size:16px;margin:0 0 10px">Presupuestos</h2>' : '') + '<div class="cp-kpis">' +
+          kpi('Solicitudes recibidas', q.recibidas, (difq === 0 ? 'Igual que en ' : Math.abs(difq) + (difq > 0 ? ' más que en ' : ' menos que en ')) + ant) +
+          kpi('Aceptadas', q.aceptadas, cerradas ? Math.round(q.aceptadas / cerradas * 100) + ' % de las ya decididas' : 'Aún sin decidir') +
+          kpi('Importe aceptado', euros(q.importe), 'Según el importe apuntado en cada solicitud') +
+          kpi('Sin contestar', q.sinContestar, q.abiertas + (q.abiertas === 1 ? ' solicitud abierta' : ' solicitudes abiertas')) +
+          '</div>';
+        html += lista('Trabajos más pedidos', d.presupuestos.trabajos) + lista('Por zona', d.presupuestos.zonas);
+        if (d.citas) html += '<h2 style="font-size:16px;margin:18px 0 10px">Citas</h2>';
+      }
+      if (!d.citas) {
+        html += '<div class="cp-kpis">' + kpi('Nota media', d.opiniones.mediaMes != null ? String(d.opiniones.mediaMes).replace('.', ',') + ' ★' : '—',
+          d.opiniones.mes ? d.opiniones.mes + (d.opiniones.mes === 1 ? ' opinión' : ' opiniones') + ' este mes' :
+          (d.opiniones.total ? 'Sin opiniones este mes · ' + String(d.opiniones.mediaTotal).replace('.', ',') + ' ★ en total' : 'Aún sin opiniones')) + '</div>';
+        main.innerHTML = html; return;
+      }
+      html += '<div class="cp-kpis">' +
         kpi('Citas atendidas', a.atendidas, (dif === 0 ? 'Igual que en ' : Math.abs(dif) + (dif > 0 ? ' más que en ' : ' menos que en ')) + ant +
           (d.enCurso ? ' (del 1 al ' + d.diaHoy + ')' : '') +
           (a.pendientes ? ' · ' + a.pendientes + ' por venir' : '')) +
@@ -331,13 +420,6 @@
           return '<div class="cp-bar' + (i === ultima ? ' cp-now' : '') + '" title="Semana del ' + et + ': ' + s.n + (s.n === 1 ? ' cita' : ' citas') + '">' +
             '<em>' + (mostrar ? s.n : '') + '</em><i style="height:' + Math.round(s.n / max * 100) + '%"></i><span>' + et + '</span></div>';
         }).join('') + '</div><p class="cp-nota">Citas confirmadas de cada semana (lunes a domingo).</p></section>';
-      function lista(t, items) {
-        if (!items.length) return '';
-        var mx = items[0].n;
-        return '<section class="cp-box"><h2>' + t + '</h2>' + items.map(function (x) {
-          return '<div class="cp-hb"><span>' + esc(x.nombre) + '</span><b>' + x.n + '</b><div class="tr"><i style="width:' + Math.round(x.n / mx * 100) + '%"></i></div></div>';
-        }).join('') + '</section>';
-      }
       html += lista('Servicios más pedidos', d.servicios);
       if (d.profesionales.length > 1) html += lista('Citas por profesional', d.profesionales);
       html += '<p class="cp-nota">Los ingresos se calculan con los precios de la pestaña Servicios. "Con el local cerrado" = reservas hechas fuera del horario del negocio.</p>';

@@ -319,6 +319,7 @@ footer.ft .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10
               <div class="f"><label for="q-name">Nombre</label><input type="text" id="q-name" autocomplete="name"></div>
               <div class="f"><label for="q-tel">Teléfono</label><input type="tel" id="q-tel" autocomplete="tel"></div>
             </div>
+            <div class="f"><label for="q-mail">Email (opcional, para enviarte la confirmación)</label><input type="email" id="q-mail" autocomplete="email"></div>
             <button class="btn btn-hot" type="submit">Pedir presupuesto</button>
             <p class="hint" id="q-err" aria-live="polite"></p>
           </div>
@@ -446,13 +447,21 @@ footer.ft .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10
     document.getElementById('q-files').textContent = n ? n+(n===1?' foto añadida':' fotos añadidas') : 'Añade fotos de la pared o del equipo actual (opcional)';
   });
 
-  /* quote submit (demo) */
+  /* quote submit: con API_PRESUPUESTOS se envía de verdad (Creaner · presupuesto.js); sin ella, modo demo */
+  var API_PRESUPUESTOS='';
   var quote=document.getElementById('quote');
   quote.addEventListener('submit',function(e){
     e.preventDefault();
     var n=document.getElementById('q-name').value.trim(), t=document.getElementById('q-tel').value.trim();
-    if(!n||!t){ document.getElementById('q-err').textContent='Pon tu nombre y un teléfono para que podamos llamarte.'; (n?document.getElementById('q-tel'):document.getElementById('q-name')).focus(); return; }
-    document.getElementById('q-fields').innerHTML='<div class="ok-box"><strong>Solicitud lista, '+esc(n)+'</strong><p>'+esc(document.getElementById('q-svc').value)+' en '+esc(document.getElementById('q-town').value)+'. En la web real, esta solicitud llega al momento al móvil del negocio.</p></div>';
+    var err=document.getElementById('q-err'), btn=quote.querySelector('button[type=submit]');
+    if(!n||t.replace(/\D/g,'').length<9){ err.textContent='Pon tu nombre y un teléfono para que podamos llamarte.'; (n?document.getElementById('q-tel'):document.getElementById('q-name')).focus(); return; }
+    var svc=document.getElementById('q-svc').value, town=document.getElementById('q-town').value, mail=document.getElementById('q-mail').value.trim();
+    function ok(extra){ document.getElementById('q-fields').innerHTML='<div class="ok-box"><strong>¡Solicitud enviada, '+esc(n)+'!</strong><p>'+esc(svc)+' en '+esc(town)+'. '+extra+'</p></div>'; }
+    if(!API_PRESUPUESTOS || !window.CreanerPresupuestos){ ok('En la web real, esta solicitud llega al momento al email del negocio y a su panel.'); return; }
+    err.textContent=''; btn.disabled=true; btn.textContent='Enviando…';
+    CreanerPresupuestos.enviar(API_PRESUPUESTOS,{nombre:n,telefono:t,email:mail,trabajo:svc,zona:town,mensaje:document.getElementById('q-msg').value.trim()},document.getElementById('q-photo').files)
+      .then(function(r){ if(!r.ok) throw new Error(r.error||'No se ha podido enviar.'); ok('Te llamamos en menos de '+(r.horas||24)+' horas'+(mail?'; te hemos enviado la confirmación por email.':'.')); })
+      .catch(function(x){ btn.disabled=false; btn.textContent='Pedir presupuesto'; err.textContent=x.message; });
   });
 
   /* revision booking (demo) */
@@ -465,10 +474,11 @@ footer.ft .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10
   daysEl.addEventListener('click',function(e){var b=e.target.closest('.slot'); if(!b) return; daySel=+b.dataset.i; drawDays();});
   drawDays();
   document.getElementById('book-btn').addEventListener('click',function(){
-    document.getElementById('book-out').innerHTML='<div class="ok-box"><strong>Revisión reservada</strong><p>'+days[daySel][0]+' '+days[daySel][1]+' · '+esc(groups.fr)+'. En la web real, el cliente recibe la confirmación por WhatsApp.</p></div>';
+    document.getElementById('book-out').innerHTML='<div class="ok-box"><strong>Revisión reservada</strong><p>'+days[daySel][0]+' '+days[daySel][1]+' · '+esc(groups.fr)+'. En la web real, el cliente recibe la confirmación por email.</p></div>';
   });
 })();
 </script>
 
+<script src="../../citas/presupuesto.js" defer></script>
 </body>
 </html>

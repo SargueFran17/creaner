@@ -27,7 +27,7 @@
  * RECORDATORIO_HORAS antes de su cita. Se instala con `configurar` o desde el menú.
  */
 
-var VERSION = '1.8';
+var VERSION = '1.9';
 var HOJAS = {
   config: 'Config',
   servicios: 'Servicios',
@@ -35,12 +35,15 @@ var HOJAS = {
   horario: 'Horario',
   cerrados: 'Cerrados',
   citas: 'Citas',
-  opiniones: 'Opiniones'
+  opiniones: 'Opiniones',
+  solicitudes: 'Solicitudes'
 };
 var CAB_CITAS = ['ID', 'Creada', 'Fecha', 'Hora', 'Fin', 'Servicio ID', 'Servicio', 'Profesional ID', 'Profesional',
   'Nombre', 'Teléfono', 'Email', 'Notas', 'Estado', 'Token', 'Evento calendario', 'Recordatorio', 'Reseña'];
 var COL_RECORDATORIO = 17; // columna Q de la pestaña Citas
 var COL_RESENA = 18;       // columna R: cuándo se pidió la opinión/reseña
+var CAB_SOLICITUDES = ['ID', 'Fecha', 'Nombre', 'Teléfono', 'Email', 'Trabajo', 'Zona', 'Mensaje', 'Fotos', 'Estado', 'Importe (€)', 'Notas', 'Token', 'Opinión'];
+var ESTADOS_SOLICITUD = ['Nueva', 'Contactado', 'Presupuesto enviado', 'Aceptado', 'Terminado', 'Perdido'];
 var CAB_OPINIONES = ['Fecha', 'Cita ID', 'Nombre', 'Servicio', 'Profesional', 'Puntuación (1-5)', 'Comentario', 'Se puede publicar'];
 
 /* ======================= MENÚ Y CONFIGURACIÓN INICIAL ======================= */
@@ -88,7 +91,12 @@ function configurar() {
     ['FONDO_PANEL', '', 'Opcional: color de fondo del panel. Formato #RRGGBB'],
     ['WEB_NEGOCIO', '', 'Dirección de la web del negocio (p. ej. https://negocio.com/). Si tiene cita.html, opinion.html y panel.html, los enlaces llevan allí en vez de a Google'],
     ['RESENA_URL', '', 'Enlace para dejar reseña en Google (perfil de empresa → Pedir reseñas). Vacío = el cliente puntúa en una página propia y se guarda en Opiniones'],
-    ['RESENA_HORAS', '2', 'Horas después de la cita para pedir la opinión. 0 = no pedir opiniones']
+    ['RESENA_HORAS', '2', 'Horas después de la cita para pedir la opinión. 0 = no pedir opiniones'],
+    ['CITAS', 'SI', 'SI = el negocio usa reservas de citas. NO = solo presupuestos (el panel no muestra la agenda)'],
+    ['PRESUPUESTOS', 'NO', 'SI = el negocio recibe solicitudes de presupuesto (formulario de la web y pestaña Solicitudes)'],
+    ['TRABAJOS', '', 'Tipos de trabajo del formulario de presupuesto, separados por comas (p. ej. Instalación, Reparación, Mantenimiento)'],
+    ['ZONAS', '', 'Opcional: municipios o zonas, separados por comas. Vacío = el cliente escribe su localidad'],
+    ['RESPUESTA_HORAS', '24', 'Plazo que se promete al cliente para llamarle tras pedir presupuesto']
   ]);
   crearHoja_(ss, HOJAS.servicios, ['ID', 'Nombre', 'Duración (min)', 'Precio (€)', 'Categoría', 'Activo'], [
     ['corte', 'Corte', '30', '12', 'Pelo', 'SI'],
@@ -112,6 +120,7 @@ function configurar() {
   ]);
   crearHoja_(ss, HOJAS.citas, CAB_CITAS, []);
   crearHoja_(ss, HOJAS.opiniones, CAB_OPINIONES, []);
+  if (si_(leerConfig_().PRESUPUESTOS)) hojaSolicitudes_();
   asegurarColumnaRecordatorio_();
   instalarActivador_();
 
@@ -354,7 +363,12 @@ function api_(d) {
     case 'estilo':
       var e = panelEstilo(), c = leerConfig_();
       e.ok = true; e.telefono = c.TELEFONO_NEGOCIO || ''; e.horas = c.CANCELACION_HORAS;
+      e.citas = c.CITAS === undefined || c.CITAS === '' || si_(c.CITAS); e.presupuestos = si_(c.PRESUPUESTOS);
       return e;
+    case 'presupuesto_config': return presupuestoConfig_();
+    case 'solicitud': return crearSolicitud_(d);
+    case 'panel_solicitudes': return conPin_(d.pin, function () { return { ok: true, datos: panelSolicitudes(d.pin) }; });
+    case 'panel_solicitud': return conPin_(d.pin, function () { return { ok: true, solicitud: panelActualizarSolicitud(d.pin, d.id, d.cambios || {}) }; });
     case 'cita_info': return { ok: true, cita: datosCita_(d.id, d.t) };
     case 'cita_dias': return { ok: true, dias: citaDias(d.id, d.t) };
     case 'cita_horas': return { ok: true, horas: citaHoras(d.id, d.t, d.fecha) };
@@ -936,8 +950,10 @@ function pedirOpiniones_(cfg, tz, sh) {
 
 function mandarPeticionOpinion_(cfg, c, destino) {
   var col = color_(cfg.COLOR_PRINCIPAL, '#1c1f24');
-  var cuerpo = '<p>Hola ' + esc_(c.nombre) + ',</p><p>Gracias por venir a ' + esc_(cfg.NEGOCIO) + '. ¿Qué tal tu <b>' + esc_(String(c.servicio).toLowerCase()) +
-    '</b> con ' + esc_(c.profesional) + '?</p>';
+  var cuerpo = c.trabajo
+    ? '<p>Hola ' + esc_(c.nombre) + ',</p><p>Gracias por confiar en ' + esc_(cfg.NEGOCIO) + '. ¿Qué tal ha quedado el trabajo de <b>' + esc_(String(c.servicio).toLowerCase()) + '</b>?</p>'
+    : '<p>Hola ' + esc_(c.nombre) + ',</p><p>Gracias por venir a ' + esc_(cfg.NEGOCIO) + '. ¿Qué tal tu <b>' + esc_(String(c.servicio).toLowerCase()) +
+      '</b> con ' + esc_(c.profesional) + '?</p>';
   if (/^https:\/\//.test(cfg.RESENA_URL || '')) {
     cuerpo += '<p>Si tienes un minuto, tu reseña en Google nos ayuda muchísimo a que más gente nos conozca:</p>' +
       '<p><a href="' + esc_(cfg.RESENA_URL) + '" style="display:inline-block;background:' + col + ';color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:bold">Dejar mi reseña en Google</a></p>';
@@ -951,7 +967,7 @@ function mandarPeticionOpinion_(cfg, c, destino) {
   }
   MailApp.sendEmail({
     to: destino || c.email, name: cfg.NEGOCIO, replyTo: cfg.EMAIL_NEGOCIO,
-    subject: '¿Qué tal tu visita a ' + cfg.NEGOCIO + '?',
+    subject: c.trabajo ? '¿Qué tal ha quedado el trabajo? · ' + cfg.NEGOCIO : '¿Qué tal tu visita a ' + cfg.NEGOCIO + '?',
     htmlBody: plantilla_('¿Qué tal fue?', cuerpo)
   });
 }
@@ -979,7 +995,9 @@ function guardarOpinionFila_(r, datos) {
 
 function citaPorToken_(id, token) {
   var f = id ? buscarCita_(String(id)) : null;
-  return (f && token && f.r[14] === String(token)) ? f : null;
+  if (f && token && f.r[14] === String(token)) return f;
+  var s = id ? buscarSolicitud_(String(id)) : null;
+  return (s && token && s.r[12] === String(token)) ? { sh: s.sh, fila: s.fila, r: filaComoCita_(s.r) } : null;
 }
 
 function avisarOpinion_(cfg, r, n, comentario) {
@@ -1162,12 +1180,196 @@ function panelCancelar(pin, id) {
   } finally { lock.releaseLock(); }
 }
 
+/* ================================ PRESUPUESTOS ================================ */
+/* Para negocios que trabajan con presupuestos (reformas, climatización, oficios). Activo con
+   Config → PRESUPUESTOS = SI. El formulario de la web (presupuesto.js o un formulario propio que
+   llame a CreanerPresupuestos.enviar) guarda cada solicitud en la pestaña Solicitudes, avisa al
+   negocio con las fotos adjuntas y responde al cliente. En el panel se cambia el estado; al
+   marcarla "Terminado" se pide la opinión al cliente (una vez). */
+
+var MAX_FOTOS = 3, MAX_FOTO_BYTES = 2500000;
+
+function hojaSolicitudes_() {
+  var ss = SpreadsheetApp.getActive();
+  return ss.getSheetByName(HOJAS.solicitudes) || crearHoja_(ss, HOJAS.solicitudes, CAB_SOLICITUDES, []);
+}
+
+function lista_(v) { return String(v || '').split(',').map(function (x) { return x.trim(); }).filter(String); }
+
+function presupuestoConfig_() {
+  var c = leerConfig_();
+  if (!si_(c.PRESUPUESTOS)) return { ok: false, error: 'Este negocio no tiene activadas las solicitudes de presupuesto.' };
+  return { ok: true, negocio: c.NEGOCIO || '', trabajos: lista_(c.TRABAJOS), zonas: lista_(c.ZONAS),
+    horas: parseInt(c.RESPUESTA_HORAS, 10) || 24, telefono: c.TELEFONO_NEGOCIO || '' };
+}
+
+function buscarSolicitud_(id) {
+  var sh = SpreadsheetApp.getActive().getSheetByName(HOJAS.solicitudes);
+  if (!sh || sh.getLastRow() < 2) return null;
+  var vals = sh.getDataRange().getDisplayValues();
+  for (var i = 1; i < vals.length; i++) if (vals[i][0] === id) return { sh: sh, fila: i + 1, r: vals[i] };
+  return null;
+}
+
+/** Convierte una fila de Solicitudes al formato de Citas que usan las opiniones. */
+function filaComoCita_(s) {
+  var r = []; for (var i = 0; i < 18; i++) r.push('');
+  r[0] = s[0]; r[1] = s[1]; r[2] = String(s[1]).slice(0, 10); r[6] = s[5] || 'trabajo'; r[8] = leerConfig_().NEGOCIO || '';
+  r[9] = s[2]; r[10] = s[3]; r[11] = s[4]; r[13] = 'Confirmada'; r[14] = s[12];
+  return r;
+}
+
+function crearSolicitud_(d) {
+  var cfg = leerConfig_(), tz = tz_();
+  if (!si_(cfg.PRESUPUESTOS)) return { ok: false, error: 'Este negocio no tiene activadas las solicitudes de presupuesto.' };
+  if (String(d.web || '').trim()) return { ok: true }; // campo trampa: solo lo rellenan los robots
+  var nombre = String(d.nombre || '').trim().slice(0, 80);
+  var telefono = String(d.telefono || '').replace(/[^\d+ ]/g, '').trim().slice(0, 20);
+  var email = String(d.email || '').trim().slice(0, 120);
+  if (!nombre || telefono.replace(/\D/g, '').length < 9) return { ok: false, error: 'Pon tu nombre y un teléfono válido.' };
+  if (email && !esEmail_(email)) return { ok: false, error: 'El email no parece correcto.' };
+  var trabajo = String(d.trabajo || '').trim().slice(0, 80), zona = String(d.zona || '').trim().slice(0, 80);
+  var mensaje = String(d.mensaje || '').trim().slice(0, 1500);
+
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return { ok: false, error: 'Mucha gente a la vez. Inténtalo en unos segundos.' };
+  try {
+    var id = 'P' + Utilities.formatDate(new Date(), tz, 'yyMMdd') + '-' + Utilities.getUuid().slice(0, 5).toUpperCase();
+    var token = Utilities.getUuid().replace(/-/g, '');
+    var blobs = [], enlaces = [];
+    (Array.isArray(d.fotos) ? d.fotos : []).slice(0, MAX_FOTOS).forEach(function (f, i) {
+      try {
+        var bytes = Utilities.base64Decode(String(f.datos || '').replace(/^data:[^,]*,/, ''));
+        if (!bytes.length || bytes.length > MAX_FOTO_BYTES) return;
+        var blob = Utilities.newBlob(bytes, /^image\/(png|webp)$/.test(f.tipo) ? f.tipo : 'image/jpeg', id + '-' + (i + 1) + '.jpg');
+        blobs.push(blob);
+        enlaces.push(carpetaFotos_().createFile(blob).getUrl());
+      } catch (x) { console.error('Foto ' + i, x); }
+    });
+    hojaSolicitudes_().appendRow([id, Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm'), nombre, telefono, email, trabajo, zona,
+      mensaje, enlaces.join(' '), 'Nueva', '', '', token, '']);
+    SpreadsheetApp.flush();
+    avisarSolicitud_(cfg, { id: id, nombre: nombre, telefono: telefono, email: email, trabajo: trabajo, zona: zona, mensaje: mensaje }, blobs);
+    return { ok: true, id: id, horas: parseInt(cfg.RESPUESTA_HORAS, 10) || 24 };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function carpetaFotos_() {
+  var nombre = 'Creaner · Fotos de solicitudes', it = DriveApp.getFoldersByName(nombre);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(nombre);
+}
+
+function avisarSolicitud_(cfg, s, blobs) {
+  var tel = s.telefono.replace(/\D/g, ''), wa = 'https://wa.me/' + (tel.length === 9 ? '34' + tel : tel);
+  var detalle = '<p><b>' + esc_(s.trabajo || 'Presupuesto') + '</b>' + (s.zona ? ' · ' + esc_(s.zona) : '') + '</p>' +
+    '<p>' + esc_(s.nombre) + ' · <a href="tel:' + esc_(tel) + '">' + esc_(s.telefono) + '</a> · <a href="' + wa + '">WhatsApp</a>' +
+    (s.email ? ' · ' + esc_(s.email) : '') + '</p>' + (s.mensaje ? '<p>“' + esc_(s.mensaje).replace(/\n/g, '<br>') + '”</p>' : '') +
+    (blobs.length ? '<p>' + blobs.length + (blobs.length === 1 ? ' foto adjunta.' : ' fotos adjuntas.') + '</p>' : '') +
+    '<p style="color:#888;font-size:13px">Cambia el estado en tu panel o en la pestaña Solicitudes de tu hoja.</p>';
+  try {
+    MailApp.sendEmail({ to: cfg.EMAIL_NEGOCIO, name: 'Presupuestos ' + (cfg.NEGOCIO || ''), replyTo: s.email || undefined,
+      subject: 'Nueva solicitud de presupuesto: ' + (s.trabajo || 'trabajo') + ' · ' + s.nombre,
+      htmlBody: plantilla_('Nueva solicitud', detalle), attachments: blobs });
+  } catch (x) { console.error('Aviso de solicitud', x); }
+  if (!s.email) return;
+  var horas = parseInt(cfg.RESPUESTA_HORAS, 10) || 24;
+  try {
+    MailApp.sendEmail({ to: s.email, name: cfg.NEGOCIO, replyTo: cfg.EMAIL_NEGOCIO,
+      subject: 'Hemos recibido tu solicitud · ' + cfg.NEGOCIO,
+      htmlBody: plantilla_('¡Solicitud recibida!', '<p>Hola ' + esc_(s.nombre) + ',</p><p>Gracias por contactar con ' + esc_(cfg.NEGOCIO) +
+        '. Hemos recibido tu solicitud de <b>' + esc_(String(s.trabajo || 'presupuesto').toLowerCase()) + '</b>' + (s.zona ? ' en ' + esc_(s.zona) : '') +
+        ' y te llamaremos en menos de ' + horas + ' horas.</p>' +
+        (cfg.TELEFONO_NEGOCIO ? '<p>Si es urgente, llámanos al 📞 <b>' + esc_(cfg.TELEFONO_NEGOCIO) + '</b>.</p>' : '')) });
+  } catch (x) { console.error('Respuesta automática', x); }
+}
+
+function solicitudJson_(r) {
+  return { id: r[0], fecha: r[1], nombre: r[2], telefono: r[3], email: r[4], trabajo: r[5], zona: r[6], mensaje: r[7],
+    fotos: lista_(String(r[8]).replace(/\s+/g, ',')), estado: r[9] || 'Nueva', importe: r[10], notas: r[11], opinion: r[13] };
+}
+
+function panelSolicitudes(pin) {
+  comprobarPin_(pin);
+  var sh = SpreadsheetApp.getActive().getSheetByName(HOJAS.solicitudes);
+  var filas = (sh && sh.getLastRow() > 1) ? sh.getRange(2, 1, sh.getLastRow() - 1, CAB_SOLICITUDES.length).getDisplayValues() : [];
+  var lista = filas.filter(function (r) { return String(r[0]).trim(); }).map(solicitudJson_)
+    .sort(function (a, b) { return String(b.fecha).localeCompare(String(a.fecha)); });
+  return { solicitudes: lista, estados: ESTADOS_SOLICITUD };
+}
+
+function panelActualizarSolicitud(pin, id, cambios) {
+  var cfg = comprobarPin_(pin), tz = tz_();
+  var lock = LockService.getScriptLock(); lock.tryLock(10000);
+  try {
+    var f = buscarSolicitud_(String(id || ''));
+    if (!f) throw new Error('Solicitud no encontrada.');
+    if (cambios.estado !== undefined) {
+      if (ESTADOS_SOLICITUD.indexOf(cambios.estado) < 0) throw new Error('Estado no válido.');
+      f.sh.getRange(f.fila, 10).setValue(cambios.estado); f.r[9] = cambios.estado;
+    }
+    if (cambios.importe !== undefined) {
+      var imp = String(cambios.importe).trim() === '' ? '' : precio_(cambios.importe);
+      var impTxt = imp === '' ? '' : importeTexto_(imp);
+      f.sh.getRange(f.fila, 11).setValue(impTxt); f.r[10] = impTxt;
+    }
+    if (cambios.notas !== undefined) { var n = String(cambios.notas).slice(0, 1000); f.sh.getRange(f.fila, 12).setValue(n); f.r[11] = n; }
+    // Trabajo terminado → pedir opinión una sola vez (si hay email y las opiniones están activas)
+    if (f.r[9] === 'Terminado' && !String(f.r[13]).trim()) {
+      var marca = '';
+      if (!f.r[4]) marca = 'Sin email';
+      else if (!cfg.RESENA_HORAS) marca = '';
+      else {
+        try {
+          mandarPeticionOpinion_(cfg, { id: f.r[0], token: f.r[12], servicio: f.r[5] || 'trabajo', profesional: cfg.NEGOCIO, nombre: f.r[2], email: f.r[4], trabajo: true });
+          marca = 'Enviada ' + Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm') + (cfg.RESENA_URL ? ' (Google)' : ' (propia)');
+        } catch (x) { console.error('Opinión de solicitud', x); }
+      }
+      if (marca) { f.sh.getRange(f.fila, 14).setValue(marca); f.r[13] = marca; }
+    }
+    return solicitudJson_(f.r);
+  } finally { lock.releaseLock(); }
+}
+
+function estadisticasPresupuestos_(mes) {
+  var sh = SpreadsheetApp.getActive().getSheetByName(HOJAS.solicitudes);
+  var filas = (sh && sh.getLastRow() > 1) ? sh.getRange(2, 1, sh.getLastRow() - 1, CAB_SOLICITUDES.length).getDisplayValues() : [];
+  var p = mes.split('-'), dPrev = new Date(+p[0], +p[1] - 2, 1), mesPrev = dPrev.getFullYear() + '-' + pad_(dPrev.getMonth() + 1);
+  function res(m) {
+    var r = { recibidas: 0, aceptadas: 0, perdidas: 0, abiertas: 0, sinContestar: 0, importe: 0, trabajos: {}, zonas: {} };
+    filas.forEach(function (x) {
+      if (String(x[1]).slice(0, 7) !== m) return;
+      var est = x[9] || 'Nueva';
+      r.recibidas++;
+      if (est === 'Aceptado' || est === 'Terminado') { r.aceptadas++; r.importe += precio_(x[10]); }
+      else if (est === 'Perdido') r.perdidas++;
+      else { r.abiertas++; if (est === 'Nueva') r.sinContestar++; }
+      if (x[5]) r.trabajos[x[5]] = (r.trabajos[x[5]] || 0) + 1;
+      if (x[6]) r.zonas[x[6]] = (r.zonas[x[6]] || 0) + 1;
+    });
+    r.importe = Math.round(r.importe * 100) / 100;
+    return r;
+  }
+  var a = res(mes);
+  return { actual: a, anterior: res(mesPrev), trabajos: ordenar_(a.trabajos).slice(0, 5), zonas: ordenar_(a.zonas).slice(0, 5) };
+}
+
 /* ================================== ESTADÍSTICAS ================================== */
 /* Resumen de un mes para el panel: citas atendidas, reservas hechas por la web (y cuántas
    fuera del horario del negocio), ingresos estimados, cancelaciones, clientes nuevos y
    repetidos, servicios más pedidos, citas por semana y nota media de las opiniones. */
 
-function precio_(v) { var n = parseFloat(String(v || '').replace(/[^\d,.-]/g, '').replace(',', '.')); return isNaN(n) ? 0 : n; }
+/** Lee importes escritos a la española o no: 2.450,50 · 2450,5 · 2450.50 · 2.450 · 15 € */
+function precio_(v) {
+  var t = String(v || '').replace(/[^\d,.-]/g, '');
+  if (t.indexOf(',') > -1) t = t.replace(/\./g, '').replace(',', '.');      // la coma es el decimal
+  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');          // 2.450 = dos mil cuatrocientos cincuenta
+  var n = parseFloat(t);
+  return isNaN(n) ? 0 : n;
+}
+
+function importeTexto_(n) { return (n % 1 ? n.toFixed(2) : String(n)).replace('.', ','); }
 
 function claveCliente_(r) {
   var tel = String(r[10] || '').replace(/\D/g, '').slice(-9);
@@ -1209,7 +1411,7 @@ function ordenar_(obj) {
 }
 
 function panelEstadisticas(pin, mes) {
-  comprobarPin_(pin);
+  var cfgE = comprobarPin_(pin);
   var tz = tz_(), hoy = hoy_(tz);
   mes = /^\d{4}-\d{2}$/.test(String(mes || '')) ? String(mes) : hoy.slice(0, 7);
   var p = mes.split('-'), dPrev = new Date(+p[0], +p[1] - 2, 1);
@@ -1253,7 +1455,9 @@ function panelEstadisticas(pin, mes) {
   return {
     mes: mes, mesAnterior: mesPrev, actual: act, anterior: ant, enCurso: enCurso, diaHoy: diaHoy,
     servicios: ordenar_(act.servicios).slice(0, 5), profesionales: ordenar_(act.profesionales),
-    semanas: semanas, opiniones: { mes: notaMes.length, mediaMes: media(notaMes), total: notaTotal.length, mediaTotal: media(notaTotal) }
+    semanas: semanas, opiniones: { mes: notaMes.length, mediaMes: media(notaMes), total: notaTotal.length, mediaTotal: media(notaTotal) },
+    citas: cfgE.CITAS === undefined || cfgE.CITAS === '' || si_(cfgE.CITAS),
+    presupuestos: si_(cfgE.PRESUPUESTOS) ? estadisticasPresupuestos_(mes) : null
   };
 }
 

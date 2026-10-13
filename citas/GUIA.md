@@ -73,6 +73,23 @@ Así el cliente nunca ve el aviso de "aplicación creada por un usuario de Googl
 - Pestaña **Estadísticas** del panel, mes a mes: citas atendidas (comparadas con el mes anterior; si el mes está en curso, con los mismos días), reservas por la web y cuántas se hicieron con el local cerrado (fuera de la pestaña Horario), ingresos estimados (precios de Servicios), clientes nuevos y repetidos, cancelaciones, nota media de Opiniones, citas por semana (8 semanas) y servicios más pedidos (y por profesional si hay más de uno).
 - No hay que configurar nada: sale de las pestañas Citas, Servicios, Horario y Opiniones.
 
+## 5d. Plan Presupuestos (reformas, climatización, oficios)
+Mismo script y misma hoja. Se puede combinar con las citas (p. ej. presupuestos + revisiones).
+1. En Config: **PRESUPUESTOS = SI**; **CITAS = NO** si el negocio no reserva citas (el panel no mostrará la Agenda); **TRABAJOS** = tipos de trabajo separados por comas (Instalación, Reparación, Mantenimiento…); **ZONAS** = municipios separados por comas (vacío = el cliente escribe su localidad); **RESPUESTA_HORAS** = plazo que se promete (24 por defecto).
+2. Ejecuta `configurar`: crea la pestaña **Solicitudes**. La primera solicitud con fotos pedirá permiso de Google Drive (las fotos se guardan en la carpeta "Creaner · Fotos de solicitudes" de la cuenta del negocio).
+3. Publica una versión nueva (paso 3).
+4. Formulario en la web del negocio:
+   - Ya hecho: `<div id="creaner-presupuesto" data-api="URL_DEL_PASO_3" data-privacidad="/privacidad.html"></div><script src="https://creaner.es/citas/presupuesto.js" defer></script>` (colores con `--cq-accent`).
+   - Diseño propio: carga presupuesto.js y llama a `CreanerPresupuestos.enviar(API, {nombre, telefono, email, trabajo, zona, mensaje}, archivosDeFotos)` (ver la demo de Terral Clima).
+5. Sube `panel.html` y `opinion.html` de la plantilla a su web y pon WEB_NEGOCIO (paso 5). `cita.html` solo si también usa citas.
+
+Qué pasa con cada solicitud:
+- Se guarda en Solicitudes (estado **Nueva**), el negocio recibe un email con los datos, enlace de WhatsApp y las fotos adjuntas, y el cliente (si dejó email) recibe "Hemos recibido tu solicitud, te llamamos en menos de X h".
+- En el panel, pestaña **Solicitudes**: llamar, WhatsApp o email con un toque; estado (Nueva → Contactado → Presupuesto enviado → Aceptado → Terminado / Perdido), importe y notas.
+- Al guardar una solicitud como **Terminado**, el cliente recibe la petición de opinión (una vez; mismo sistema que las citas, con RESENA_URL o valoración propia).
+- Estadísticas: solicitudes recibidas, aceptadas (%), importe aceptado, sin contestar, trabajos más pedidos y zonas.
+- Hasta 3 fotos por solicitud, reducidas en el móvil a 1600 px. Campo trampa contra robots.
+
 ## 6. Comprobar antes de entregar
 - [ ] Hacer una reserva de prueba desde la web (con tu email) y comprobar que llegan los 2 emails.
 - [ ] Comprobar que existe el activador `enviarRecordatorios` y que el recordatorio de prueba llega bien.
