@@ -19,6 +19,7 @@
 
   var css = '' +
     ':where(#creaner-citas){--cc-accent:#0d1d38;--cc-ink:#14181e;--cc-muted:#5d6672;--cc-bg:#fff;--cc-soft:#f1f3f6;--cc-line:#dde1e7;--cc-radius:14px;--cc-font:inherit;--cc-bad:#a2463a}' +
+    '#creaner-citas{display:block;min-width:0;max-width:100%;contain:inline-size}' +
     '#creaner-citas .cc{font-family:var(--cc-font);color:var(--cc-ink);background:var(--cc-bg);border:1px solid var(--cc-line);border-radius:calc(var(--cc-radius) + 6px);overflow:hidden;max-width:100%}' +
     '#creaner-citas .cc-head{padding:16px 18px 12px;border-bottom:1px solid var(--cc-line)}' +
     '#creaner-citas .cc-title{margin:0;font-size:20px;font-weight:600}' +
@@ -36,8 +37,8 @@
     '#creaner-citas .cc-opt span{grid-column:1;font-size:13px;color:var(--cc-muted)}' +
     '#creaner-citas .cc-opt em{grid-row:1/span 2;grid-column:2;align-self:center;font-style:normal;font-weight:600;font-variant-numeric:tabular-nums}' +
     '#creaner-citas .cc-opt[aria-pressed=true]{border-color:var(--cc-accent);box-shadow:inset 0 0 0 1px var(--cc-accent);background:var(--cc-soft)}' +
-    '#creaner-citas .cc-days{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}' +
-    '#creaner-citas .cc-day{flex:0 0 58px;border:1px solid var(--cc-line);background:var(--cc-bg);border-radius:12px;padding:7px 0;display:flex;flex-direction:column;align-items:center;font-size:12px;line-height:1.25}' +
+    '#creaner-citas .cc-days{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;min-width:0;max-width:100%;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}' +
+    '#creaner-citas .cc-day{flex:0 0 58px;scroll-snap-align:start;border:1px solid var(--cc-line);background:var(--cc-bg);border-radius:12px;padding:7px 0;display:flex;flex-direction:column;align-items:center;font-size:12px;line-height:1.25}' +
     '#creaner-citas .cc-day b{font-size:18px;font-variant-numeric:tabular-nums}' +
     '#creaner-citas .cc-day:disabled{opacity:.35;cursor:not-allowed}' +
     '#creaner-citas .cc-day[aria-pressed=true]{background:var(--cc-accent);border-color:var(--cc-accent);color:#fff}' +

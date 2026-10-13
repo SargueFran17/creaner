@@ -57,7 +57,7 @@ h2.t em{font-style:italic;color:var(--glass-deep)}
 .nav .btn{padding:10px 18px;font-size:14px}
 
 /* hero */
-.hero .wrap{display:grid;grid-template-columns:1fr 440px;gap:clamp(28px,5vw,64px);align-items:start;padding-block:clamp(36px,6vw,72px) clamp(48px,7vw,88px)}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,1fr) 440px;gap:clamp(28px,5vw,64px);align-items:start;padding-block:clamp(36px,6vw,72px) clamp(48px,7vw,88px)}
 .hero h1{font-family:var(--f-d);font-weight:400;font-size:clamp(44px,7vw,88px);line-height:.96;letter-spacing:-.03em;text-wrap:balance;margin-top:18px}
 .hero h1 em{font-style:italic;color:var(--glass-deep)}
 .hero .lead{margin-top:22px;font-size:clamp(17px,1.8vw,19px);color:var(--muted);max-width:44ch}
@@ -72,7 +72,7 @@ h2.t em{font-style:italic;color:var(--glass-deep)}
 .hero-photo span{position:absolute;left:14px;bottom:12px;background:rgba(255,255,255,.88);color:var(--muted);font-size:11.5px;padding:5px 9px;border-radius:6px}
 
 /* booking widget */
-.book-real{scroll-margin-top:90px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 88px)}
+.book-real{min-width:0;scroll-margin-top:90px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 88px)}
 #creaner-citas{--cc-accent:#2f6157;--cc-ink:#1c2420;--cc-muted:#5d6a63;--cc-soft:#dcebe6;--cc-line:#d8e0db;--cc-radius:14px;--cc-font:"Albert Sans",system-ui,sans-serif}
 #creaner-citas .cc{box-shadow:0 1px 2px rgba(28,36,32,.05),0 24px 50px rgba(28,36,32,.10)}
 #creaner-citas .cc-title{font-family:"Bodoni Moda",Georgia,serif;font-weight:400;font-size:26px}
@@ -180,7 +180,7 @@ footer.ft .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10
 .fab .btn{width:100%;box-shadow:0 10px 30px rgba(28,36,32,.3)}
 
 @media (max-width:980px){
-  .hero .wrap{grid-template-columns:1fr}
+  .hero .wrap{grid-template-columns:minmax(0,1fr)}
   .book,.book-real{position:static}
   .nav-links{display:none}
   .team,.revs{grid-template-columns:1fr 1fr}
