@@ -19,9 +19,12 @@
  *   ?accion=cancelar&id=ID&t=TOKEN                  página para que el cliente cancele
  *   ?accion=panel                                   panel del negocio (pide PIN)
  *   POST {accion:"reservar", ...}                   crea la cita (cuerpo JSON como text/plain)
+ *
+ * Recordatorios: un activador horario (enviarRecordatorios) manda un email al cliente
+ * RECORDATORIO_HORAS antes de su cita. Se instala con `configurar` o desde el menú.
  */
 
-var VERSION = '1.2';
+var VERSION = '1.3';
 var HOJAS = {
   config: 'Config',
   servicios: 'Servicios',
@@ -31,7 +34,8 @@ var HOJAS = {
   citas: 'Citas'
 };
 var CAB_CITAS = ['ID', 'Creada', 'Fecha', 'Hora', 'Fin', 'Servicio ID', 'Servicio', 'Profesional ID', 'Profesional',
-  'Nombre', 'Teléfono', 'Email', 'Notas', 'Estado', 'Token', 'Evento calendario'];
+  'Nombre', 'Teléfono', 'Email', 'Notas', 'Estado', 'Token', 'Evento calendario', 'Recordatorio'];
+var COL_RECORDATORIO = 17; // columna Q de la pestaña Citas
 
 /* ======================= MENÚ Y CONFIGURACIÓN INICIAL ======================= */
 
@@ -40,6 +44,9 @@ function onOpen() {
     .addItem('Configurar hoja (solo la primera vez)', 'configurar')
     .addItem('Enviarme un email de prueba', 'emailDePrueba')
     .addItem('Ver enlace del panel', 'mostrarEnlacePanel')
+    .addSeparator()
+    .addItem('Activar recordatorios automáticos', 'activarRecordatorios')
+    .addItem('Enviarme un recordatorio de prueba', 'recordatorioDePrueba')
     .addToUi();
 }
 
@@ -57,6 +64,7 @@ function configurar() {
     ['ANTELACION_MIN_HORAS', '2', 'Horas mínimas de antelación para reservar'],
     ['DIAS_VISTA', '30', 'Cuántos días hacia delante se puede reservar'],
     ['CANCELACION_HORAS', '24', 'Hasta cuántas horas antes puede cancelar el cliente'],
+    ['RECORDATORIO_HORAS', '24', 'Cuántas horas antes de la cita se envía el recordatorio al cliente. 0 = sin recordatorios'],
     ['PIN_PANEL', String(Math.floor(100000 + Math.random() * 900000)), 'PIN del panel del negocio. Cámbialo si quieres'],
     ['CALENDARIO', 'NO', 'SI = añadir cada cita al Google Calendar de esta cuenta'],
     ['URL_WEB', '', 'Dirección /exec de la implementación (Implementar → Gestionar implementaciones)'],
@@ -85,6 +93,8 @@ function configurar() {
     ['2026-12-25', '2026-12-25', 'TODOS', 'Navidad']
   ]);
   crearHoja_(ss, HOJAS.citas, CAB_CITAS, []);
+  asegurarColumnaRecordatorio_();
+  instalarActivador_();
 
   SpreadsheetApp.getUi().alert('Creaner Citas',
     'Hoja configurada. Rellena Config, Servicios, Profesionales, Horario y Cerrados, y después publica el script como aplicación web.',
@@ -144,6 +154,8 @@ function leerConfig_() {
   c.ANTELACION_MIN_HORAS = parseFloat(c.ANTELACION_MIN_HORAS) || 0;
   c.DIAS_VISTA = parseInt(c.DIAS_VISTA, 10) || 30;
   c.CANCELACION_HORAS = parseFloat(c.CANCELACION_HORAS) || 0;
+  // Si la hoja es anterior a la v1.3 y no tiene el ajuste, se usan 24 h.
+  c.RECORDATORIO_HORAS = (c.RECORDATORIO_HORAS === undefined || c.RECORDATORIO_HORAS === '') ? 24 : (parseFloat(c.RECORDATORIO_HORAS) || 0);
   return c;
 }
 
@@ -351,7 +363,7 @@ function reservar_(d) {
     }
     var sh = SpreadsheetApp.getActive().getSheetByName(HOJAS.citas);
     sh.appendRow([id, Utilities.formatDate(new Date(), ctx.tz, 'yyyy-MM-dd HH:mm'), fecha, hora, fin, serv.id, serv.nombre,
-      libre.profesional, libre.profesionalNombre, nombre, telefono, email, notas, 'Confirmada', token, eventoId]);
+      libre.profesional, libre.profesionalNombre, nombre, telefono, email, notas, 'Confirmada', token, eventoId, '']);
     SpreadsheetApp.flush();
 
     var cita = { id: id, fecha: fecha, hora: hora, servicio: serv.nombre, precio: serv.precio,
@@ -383,9 +395,17 @@ function plantilla_(titulo, cuerpo) {
     '<p style="color:#888;font-size:12px;margin-top:24px">Reservas gestionadas con Creaner</p></div>';
 }
 
+function lineaCita_(servicio, profesional, fecha, hora) {
+  return '<p><b>' + esc_(servicio) + '</b> con ' + esc_(profesional) + '<br>' +
+    esc_(fechaBonita_(fecha)) + ' a las ' + esc_(hora) + '</p>';
+}
+
+function urlCancelar_(id, token) {
+  return urlWeb_() + '?accion=cancelar&id=' + encodeURIComponent(id) + '&t=' + token;
+}
+
 function avisar_(cfg, c, token) {
-  var linea = '<p><b>' + esc_(c.servicio) + '</b> con ' + esc_(c.profesional) + '<br>' +
-    esc_(fechaBonita_(c.fecha)) + ' a las ' + esc_(c.hora) + '</p>';
+  var linea = lineaCita_(c.servicio, c.profesional, c.fecha, c.hora);
   try {
     MailApp.sendEmail({
       to: cfg.EMAIL_NEGOCIO, name: 'Reservas ' + (cfg.NEGOCIO || ''), replyTo: c.email || undefined,
@@ -395,7 +415,7 @@ function avisar_(cfg, c, token) {
     });
   } catch (x) { console.error('Aviso al negocio', x); }
   if (!c.email) return;
-  var url = urlWeb_() + '?accion=cancelar&id=' + encodeURIComponent(c.id) + '&t=' + token;
+  var url = urlCancelar_(c.id, token);
   try {
     MailApp.sendEmail({
       to: c.email, name: cfg.NEGOCIO, replyTo: cfg.EMAIL_NEGOCIO,
@@ -407,6 +427,137 @@ function avisar_(cfg, c, token) {
         (cfg.CANCELACION_HORAS ? ' (hasta ' + cfg.CANCELACION_HORAS + ' h antes)' : '') + '.</p>')
     });
   } catch (x) { console.error('Confirmación al cliente', x); }
+}
+
+/* ================================= RECORDATORIOS ================================= */
+/* Un activador de Google ejecuta enviarRecordatorios() cada hora. Manda el recordatorio a
+   las citas confirmadas que empiezan dentro de RECORDATORIO_HORAS y apunta en la columna
+   "Recordatorio" cuándo se envió, para no repetirlo. */
+
+var RECORDATORIO_SILENCIO = [22, 8];      // no se envían emails de 22:00 a 8:00
+var RECORDATORIO_MARGEN_RESERVA_H = 6;   // si reservó hace menos de 6 h, ya tiene la confirmación reciente
+var CUPO_RESERVADO_CONFIRMACIONES = 5;   // emails diarios que se guardan para confirmaciones de reservas nuevas
+
+/** Menú: instala el activador horario y añade la columna Recordatorio si falta. */
+function activarRecordatorios() {
+  asegurarColumnaRecordatorio_();
+  var nuevo = instalarActivador_();
+  var horas = leerConfig_().RECORDATORIO_HORAS;
+  SpreadsheetApp.getUi().alert('Creaner Citas',
+    (nuevo ? 'Recordatorios activados.' : 'Los recordatorios ya estaban activados.') +
+    (horas ? ' Cada cliente recibirá un email unas ' + horas + ' h antes de su cita (nunca entre las 22:00 y las 8:00).'
+           : ' Ojo: RECORDATORIO_HORAS está en 0 en Config, así que no se enviará ninguno hasta que lo cambies.'),
+    SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+/** Crea el activador horario si no existe. Devuelve true si lo ha creado ahora. */
+function instalarActivador_() {
+  var existe = ScriptApp.getProjectTriggers().some(function (t) {
+    return t.getHandlerFunction() === 'enviarRecordatorios';
+  });
+  if (existe) return false;
+  ScriptApp.newTrigger('enviarRecordatorios').timeBased().everyHours(1).create();
+  return true;
+}
+
+/** Hojas creadas con la v1.2 o anterior no tienen la columna: se añade sin tocar los datos. */
+function asegurarColumnaRecordatorio_() {
+  var sh = SpreadsheetApp.getActive().getSheetByName(HOJAS.citas);
+  if (!sh) return null;
+  if (sh.getMaxColumns() < COL_RECORDATORIO) sh.insertColumnsAfter(sh.getMaxColumns(), COL_RECORDATORIO - sh.getMaxColumns());
+  var cab = sh.getRange(1, COL_RECORDATORIO);
+  if (String(cab.getValue()).trim() !== 'Recordatorio') {
+    cab.setValue('Recordatorio').setFontWeight('bold').setBackground('#0d1d38').setFontColor('#ffffff');
+    sh.getRange(2, COL_RECORDATORIO, Math.max(sh.getMaxRows() - 1, 1), 1).setNumberFormat('@');
+  }
+  return sh;
+}
+
+/** Lo ejecuta el activador cada hora. */
+function enviarRecordatorios() {
+  var cfg = leerConfig_();
+  if (!cfg.RECORDATORIO_HORAS) return;
+  var tz = tz_();
+  var horaLocal = parseInt(Utilities.formatDate(new Date(), tz, 'H'), 10);
+  if (horaLocal >= RECORDATORIO_SILENCIO[0] || horaLocal < RECORDATORIO_SILENCIO[1]) return;
+
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return; // otra ejecución está en marcha; la siguiente lo recogerá
+  try {
+    var sh = asegurarColumnaRecordatorio_();
+    if (!sh) return;
+    var vals = sh.getDataRange().getDisplayValues();
+    var ahora = Date.now(), enviados = 0;
+    for (var i = 1; i < vals.length; i++) {
+      var r = vals[i];
+      if (String(r[13]).trim() !== 'Confirmada' || String(r[COL_RECORDATORIO - 1] || '').trim()) continue;
+      var fecha = normFecha_(r[2]), hora = String(r[3]).trim();
+      if (!fecha || !/^\d{1,2}:\d{2}$/.test(hora)) continue;
+      var inicio = Utilities.parseDate(fecha + ' ' + hora, tz, 'yyyy-MM-dd HH:mm').getTime();
+      var faltanH = (inicio - ahora) / 3600000;
+      if (faltanH <= 0 || faltanH > cfg.RECORDATORIO_HORAS) continue;
+
+      var email = String(r[11] || '').trim();
+      if (!email) { sh.getRange(i + 1, COL_RECORDATORIO).setValue('Sin email'); continue; }
+
+      var creada = null;
+      try { creada = Utilities.parseDate(String(r[1]).trim(), tz, 'yyyy-MM-dd HH:mm').getTime(); } catch (x) {}
+      if (creada && (ahora - creada) / 3600000 < RECORDATORIO_MARGEN_RESERVA_H) continue; // se revisa en la próxima hora
+
+      if (MailApp.getRemainingDailyQuota() <= CUPO_RESERVADO_CONFIRMACIONES) {
+        console.warn('Recordatorios pausados: queda poco cupo de emails hoy.');
+        break;
+      }
+      try {
+        mandarRecordatorio_(cfg, tz, {
+          id: r[0], fecha: fecha, hora: hora, servicio: r[6], profesional: r[8], nombre: r[9], email: email, token: r[14]
+        }, faltanH);
+        sh.getRange(i + 1, COL_RECORDATORIO).setValue('Enviado ' + Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm'));
+        enviados++;
+      } catch (x) {
+        console.error('Recordatorio ' + r[0], x); // sin marca: se reintenta en la próxima hora
+      }
+    }
+    if (enviados) console.log('Recordatorios enviados: ' + enviados);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** "hoy", "mañana" o la fecha completa. */
+function cuandoTexto_(fecha, tz) {
+  var hoy = hoy_(tz);
+  if (fecha === hoy) return 'hoy';
+  if (fecha === sumarDias_(hoy, 1)) return 'mañana';
+  return 'el ' + fechaBonita_(fecha);
+}
+
+function mandarRecordatorio_(cfg, tz, c, faltanH, destino) {
+  var cuando = cuandoTexto_(c.fecha, tz);
+  var puedeCancelar = c.token && faltanH >= cfg.CANCELACION_HORAS;
+  var noPuedes = puedeCancelar
+    ? '<p>¿Al final no puedes venir? <a href="' + urlCancelar_(c.id, c.token) + '">Cancela tu cita aquí</a> y así otra persona podrá aprovechar el hueco.</p>'
+    : '<p>¿Al final no puedes venir? Avísanos cuanto antes' +
+      (cfg.TELEFONO_NEGOCIO ? ' llamando al <b>' + esc_(cfg.TELEFONO_NEGOCIO) + '</b> o' : '') +
+      ' respondiendo a este email, y así otra persona podrá aprovechar el hueco.</p>';
+  MailApp.sendEmail({
+    to: destino || c.email, name: cfg.NEGOCIO, replyTo: cfg.EMAIL_NEGOCIO,
+    subject: 'Recordatorio: tu cita en ' + cfg.NEGOCIO + ' es ' + cuando + ' a las ' + c.hora,
+    htmlBody: plantilla_('Te esperamos ' + cuando, '<p>Hola ' + esc_(c.nombre) + ',</p>' +
+      '<p>Te recordamos tu cita:</p>' + lineaCita_(c.servicio, c.profesional, c.fecha, c.hora) +
+      (cfg.DIRECCION ? '<p>📍 ' + esc_(cfg.DIRECCION) + '</p>' : '') +
+      (cfg.TELEFONO_NEGOCIO ? '<p>📞 ' + esc_(cfg.TELEFONO_NEGOCIO) + '</p>' : '') + noPuedes)
+  });
+}
+
+/** Menú: envía al email del negocio un recordatorio de ejemplo para ver cómo le llega al cliente. */
+function recordatorioDePrueba() {
+  var cfg = leerConfig_(), tz = tz_();
+  var serv = leerServicios_()[0] || { nombre: 'Servicio de prueba' };
+  var pro = leerProfesionales_()[0] || { nombre: 'Profesional' };
+  mandarRecordatorio_(cfg, tz, { id: 'PRUEBA', fecha: sumarDias_(hoy_(tz), 1), hora: '10:00', servicio: serv.nombre,
+    profesional: pro.nombre, nombre: 'Cliente de prueba', token: '' }, 24, cfg.EMAIL_NEGOCIO);
+  SpreadsheetApp.getUi().alert('Recordatorio de prueba enviado a ' + cfg.EMAIL_NEGOCIO + '. Mira también en Spam.');
 }
 
 /* ============================ CANCELACIÓN POR EL CLIENTE ============================ */

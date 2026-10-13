@@ -15,13 +15,14 @@ Dónde vive: **en la cuenta de Google del propio negocio** (su Gmail o uno cread
 2. Google pedirá permisos: *Revisar permisos* → elige la cuenta → *Configuración avanzada* → *Ir a … (no seguro)* → *Permitir*. (Sale "no seguro" porque el script es nuestro y no está publicado en la tienda de Google; es normal.)
 3. Vuelve a la hoja: verás las pestañas **Config, Servicios, Profesionales, Horario, Cerrados y Citas** con datos de ejemplo.
 4. Rellénalas con los datos del formulario de alta del cliente:
-   - **Config**: nombre, email, teléfono, dirección, intervalo, antelación, días visibles, horas para cancelar, PIN del panel, CALENDARIO (SI/NO), URL_WEB, y los colores de la marca (COLOR_PRINCIPAL, COLOR_ACENTO) y LOGO_URL opcional. Los colores se aplican al panel, a los emails y a la página de cancelar.
+   - **Config**: nombre, email, teléfono, dirección, intervalo, antelación, días visibles, horas para cancelar, horas del recordatorio (RECORDATORIO_HORAS, 24 por defecto; 0 = sin recordatorios), PIN del panel, CALENDARIO (SI/NO), URL_WEB, y los colores de la marca (COLOR_PRINCIPAL, COLOR_ACENTO) y LOGO_URL opcional. Los colores se aplican al panel, a los emails y a la página de cancelar.
    - **Servicios**: un ID corto sin espacios (`corte-barba`), nombre, duración en minutos, precio, categoría y `SI` en Activo.
    - **Profesionales**: ID, nombre y qué servicios hace (`TODOS` o IDs separados por comas).
    - **Horario**: una fila por tramo. Turno partido = dos filas el mismo día. `TODOS` vale para todos los profesionales.
    - **Cerrados**: festivos y vacaciones, en formato `AAAA-MM-DD`.
    - **Citas**: no tocar; se rellena sola.
 5. Menú **Creaner Citas → Enviarme un email de prueba** para comprobar que llegan los avisos.
+6. Los **recordatorios automáticos** se activan solos al ejecutar `configurar` (crean un activador que se ejecuta cada hora). Para comprobarlo: Apps Script → **Activadores** (icono del reloj) → debe aparecer `enviarRecordatorios`, cada hora. Menú **Creaner Citas → Enviarme un recordatorio de prueba** para ver cómo le llega al cliente.
 
 ## 3. Publicar el script
 1. En Apps Script: **Implementar → Nueva implementación** → tipo **Aplicación web**.
@@ -51,16 +52,24 @@ Colores del negocio (opcional, en su CSS):
 - Desde el panel: ver la semana, cancelar citas y marcar días cerrados.
 - Si se activa CALENDARIO = SI, cada cita aparece también en el Google Calendar de la cuenta.
 
+## Actualizar un negocio que ya usa la v1.2
+1. Pega el nuevo `Code.gs` encima del antiguo y guarda.
+2. Elige la función **`activarRecordatorios`** y pulsa **Ejecutar**. Google pedirá un permiso nuevo (para crear el activador): acéptalo. Se añade sola la columna Recordatorio en Citas.
+3. Opcional: añade en Config la fila `RECORDATORIO_HORAS` (si no está, se usan 24 h).
+4. **Implementar → Gestionar implementaciones → editar → Nueva versión → Implementar**.
+
 ## 6. Comprobar antes de entregar
 - [ ] Hacer una reserva de prueba desde la web (con tu email) y comprobar que llegan los 2 emails.
+- [ ] Comprobar que existe el activador `enviarRecordatorios` y que el recordatorio de prueba llega bien.
 - [ ] Probar el enlace de cancelación del email.
 - [ ] Entrar al panel con el PIN y ver la cita.
 - [ ] Borrar la fila de prueba de la pestaña Citas.
 
 ## Límites a tener en cuenta
-- Gmail gratuito: unos **100 emails al día** por cuenta (cada cita gasta 1–2). De sobra para un negocio pequeño.
+- Gmail gratuito: unos **100 emails al día** por cuenta. Cada cita gasta hasta 3 (aviso al negocio, confirmación y recordatorio), así que da para unas 30 citas al día. Si quedan menos de 5 envíos en el día, los recordatorios se paran para no dejar sin confirmación a las reservas nuevas.
+- Recordatorios: se envían unas RECORDATORIO_HORAS antes de la cita, nunca entre las 22:00 y las 8:00, y no a quien reservó hace menos de 6 h. En la pestaña Citas, la columna **Recordatorio** dice cuándo se envió (o "Sin email").
 - Cada consulta tarda 1–2 segundos: es normal en Google Apps Script.
-- Recordatorios por WhatsApp: no incluidos (tienen coste). El cliente recibe email de confirmación.
+- Recordatorios por WhatsApp o SMS: no incluidos (tienen coste). Los recordatorios son por email.
 
 ## Protección de datos (obligatorio)
 Guardamos nombre, teléfono y email de los clientes del negocio, así que Creaner es **encargado del tratamiento**:
