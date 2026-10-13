@@ -68,6 +68,10 @@ Así el cliente nunca ve el aviso de "aplicación creada por un usuario de Googl
 - Desde el panel: ver la semana, cancelar citas y marcar días cerrados.
 - Si se activa CALENDARIO = SI, cada cita aparece también en el Google Calendar de la cuenta.
 
+## 5c. Estadísticas (en el panel)
+- Pestaña **Estadísticas** del panel, mes a mes: citas atendidas (comparadas con el mes anterior; si el mes está en curso, con los mismos días), reservas por la web y cuántas se hicieron con el local cerrado (fuera de la pestaña Horario), ingresos estimados (precios de Servicios), clientes nuevos y repetidos, cancelaciones, nota media de Opiniones, citas por semana (8 semanas) y servicios más pedidos (y por profesional si hay más de uno).
+- No hay que configurar nada: sale de las pestañas Citas, Servicios, Horario y Opiniones.
+
 ## 6. Comprobar antes de entregar
 - [ ] Hacer una reserva de prueba desde la web (con tu email) y comprobar que llegan los 2 emails.
 - [ ] Comprobar que existe el activador `enviarRecordatorios` y que el recordatorio de prueba llega bien.

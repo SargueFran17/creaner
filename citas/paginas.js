@@ -84,6 +84,22 @@
     '#creaner-pagina .cp-closer>*{min-width:0}' +
     '#creaner-pagina .cp-closer label{display:block;font-size:13px;font-weight:600;margin-bottom:4px}#creaner-pagina .cp-closer .cp-btn{margin:0;align-self:end}' +
     '#creaner-pagina .cp-status{text-align:center;color:var(--cp-muted);padding:40px 0}' +
+    '#creaner-pagina .cp-tabs{display:flex;gap:6px;margin-top:14px}#creaner-pagina .cp-tabs button{border:0;background:transparent;color:var(--cp-on);opacity:.7;font:inherit;font-size:14px;font-weight:600;padding:8px 14px;border-radius:999px;cursor:pointer;min-height:40px}' +
+    '#creaner-pagina .cp-tabs button[aria-selected=true]{opacity:1;box-shadow:inset 0 0 0 1px currentColor}' +
+    '#creaner-pagina .cp-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:14px}' +
+    '#creaner-pagina .cp-kpi{background:#fff;border:1px solid var(--cp-line);border-radius:14px;padding:14px}' +
+    '#creaner-pagina .cp-kpi small{display:block;font-size:12px;font-weight:600;color:var(--cp-muted);text-transform:uppercase;letter-spacing:.06em}' +
+    '#creaner-pagina .cp-kpi b{display:block;font-size:28px;line-height:1.15;margin:6px 0 2px;font-variant-numeric:tabular-nums}' +
+    '#creaner-pagina .cp-kpi span{font-size:13px;color:var(--cp-muted)}' +
+    '#creaner-pagina .cp-box{background:#fff;border:1px solid var(--cp-line);border-radius:14px;padding:14px 16px;margin-bottom:14px}#creaner-pagina .cp-box h2{font-size:16px;margin:0 0 12px}' +
+    '#creaner-pagina .cp-bars{display:flex;align-items:flex-end;gap:6px;height:150px;padding-top:18px}' +
+    '#creaner-pagina .cp-bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}' +
+    '#creaner-pagina .cp-bar i{display:block;width:100%;max-width:34px;background:var(--cp-c);border-radius:4px 4px 0 0;min-height:2px;opacity:.55}#creaner-pagina .cp-bar.cp-now i{opacity:1}' +
+    '#creaner-pagina .cp-bar em{font-style:normal;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;margin-bottom:4px;min-height:1em}' +
+    '#creaner-pagina .cp-bar span{font-size:11px;color:var(--cp-muted);margin-top:6px;white-space:nowrap}' +
+    '#creaner-pagina .cp-hb{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;margin-bottom:10px;font-size:14px}' +
+    '#creaner-pagina .cp-hb .tr{grid-column:1/-1;height:8px;background:var(--cp-bg);border-radius:4px;overflow:hidden}#creaner-pagina .cp-hb .tr i{display:block;height:100%;background:var(--cp-c);border-radius:4px}' +
+    '#creaner-pagina .cp-nota{font-size:12px;color:var(--cp-muted);margin:4px 0 0}' +
     '#creaner-pagina .cp-pin{background:#fff;border:1px solid var(--cp-line);border-radius:14px;padding:20px;max-width:360px;margin:20px auto}#creaner-pagina .cp-pin label{font-weight:600;display:block;margin-bottom:6px}';
 
   var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
@@ -224,16 +240,27 @@
     root.innerHTML = '<header class="cp-ph"><div class="cp-pw">' +
       (E.logo ? '<img src="' + esc(E.logo) + '" alt="" style="max-height:40px;max-width:200px;display:block;margin-bottom:10px">' : '') +
       '<small>Panel privado · no compartas este enlace ni el PIN</small><h1 id="cp-title">' + esc(E.saludo || E.negocio || 'Citas') + '</h1>' +
+      '<div class="cp-tabs" id="cp-tabs" role="tablist" hidden><button type="button" role="tab" id="cp-t-ag" aria-selected="true">Agenda</button>' +
+      '<button type="button" role="tab" id="cp-t-st" aria-selected="false">Estadísticas</button></div>' +
       '<div class="cp-nav" id="cp-nav" hidden><button type="button" id="cp-prev">‹ Anterior</button><div class="cp-rng" id="cp-rng">—</div>' +
       '<button type="button" id="cp-next">Siguiente ›</button><button type="button" id="cp-today">Hoy</button></div>' +
       '<div class="cp-sum" id="cp-sum"></div></div></header><main class="cp-pm" id="cp-main"></main>';
-    var main = $('cp-main');
-    $('cp-prev').onclick = function () { start = add(start, -7); cargar(); };
-    $('cp-next').onclick = function () { start = add(start, 7); cargar(); };
-    $('cp-today').onclick = function () { start = hoy(); cargar(); };
+    var main = $('cp-main'), vista = 'agenda', mes = new Date(start.getFullYear(), start.getMonth(), 1);
+    var MESES_L = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    $('cp-prev').onclick = function () { if (vista === 'agenda') start = add(start, -7); else mes = new Date(mes.getFullYear(), mes.getMonth() - 1, 1); cargar(); };
+    $('cp-next').onclick = function () { if (vista === 'agenda') start = add(start, 7); else mes = new Date(mes.getFullYear(), mes.getMonth() + 1, 1); cargar(); };
+    $('cp-today').onclick = function () { start = hoy(); mes = new Date(start.getFullYear(), start.getMonth(), 1); cargar(); };
+    function tab(v) {
+      vista = v; $('cp-t-ag').setAttribute('aria-selected', v === 'agenda'); $('cp-t-st').setAttribute('aria-selected', v !== 'agenda');
+      $('cp-prev').textContent = v === 'agenda' ? '‹ Anterior' : '‹ Mes anterior'; $('cp-next').textContent = v === 'agenda' ? 'Siguiente ›' : 'Mes siguiente ›';
+      $('cp-today').textContent = v === 'agenda' ? 'Hoy' : 'Este mes';
+      cargar();
+    }
+    $('cp-t-ag').onclick = function () { tab('agenda'); };
+    $('cp-t-st').onclick = function () { tab('stats'); };
 
     function pedirPin(msg) {
-      $('cp-nav').hidden = true; $('cp-sum').textContent = '';
+      $('cp-nav').hidden = true; $('cp-tabs').hidden = true; $('cp-sum').textContent = '';
       main.innerHTML = '<form class="cp-pin" id="cp-pf"><label for="cp-pin">PIN del panel</label>' +
         '<input id="cp-pin" type="password" inputmode="numeric" autocomplete="current-password" required>' +
         '<button class="cp-btn" type="submit">Entrar</button><p class="cp-err">' + esc(msg || '') + '</p></form>';
@@ -241,6 +268,7 @@
       $('cp-pf').onsubmit = function (e) { e.preventDefault(); pin = $('cp-pin').value.trim(); cargar(); };
     }
     function cargar() {
+      if (vista === 'stats') return cargarStats();
       var fin = add(start, 6);
       $('cp-rng').textContent = corto(start) + ' – ' + corto(fin);
       main.innerHTML = '<div class="cp-status">Cargando citas…</div>';
@@ -255,8 +283,61 @@
       post(body).then(function (r) { if (r.pin || r.bloqueado) { pin = ''; return pedirPin(r.error); } cargar(); })
         .catch(function (x) { $('cp-sum').textContent = 'Error: ' + x.message; });
     }
+    function cargarStats() {
+      var m = mes.getFullYear() + '-' + pad(mes.getMonth() + 1);
+      $('cp-rng').textContent = MESES_L[mes.getMonth()] + ' ' + mes.getFullYear();
+      main.innerHTML = '<div class="cp-status">Calculando estadísticas…</div>';
+      post({ accion: 'panel_estadisticas', pin: pin, mes: m }).then(function (r) {
+        if (r.pin || r.bloqueado) { pin = ''; return pedirPin(r.bloqueado ? r.error : 'PIN incorrecto. Inténtalo de nuevo.'); }
+        pintarStats(r.datos);
+      }).catch(function (x) { main.innerHTML = '<div class="cp-status">No se han podido calcular. ' + esc(x.message) + '</div>'; });
+    }
+    function euros(n) { return (Math.round(n * 100) / 100).toLocaleString('es-ES', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }) + ' €'; }
+    function nombreMes(m) { var p = m.split('-'); return MESES_L[+p[1] - 1]; }
+    function pintarStats(d) {
+      $('cp-nav').hidden = false; $('cp-tabs').hidden = false;
+      var a = d.actual, b = d.anterior, ant = nombreMes(d.mesAnterior);
+      var esActual = d.enCurso;
+      var dif = a.atendidas - b.atendidas;
+      $('cp-sum').textContent = esActual ? 'Mes en curso: datos hasta hoy' : 'Mes completo';
+      var totalCitas = a.atendidas + a.pendientes + a.canceladas;
+      var pc = totalCitas ? Math.round(a.canceladas / totalCitas * 100) : 0;
+      function kpi(t, v, sub) { return '<div class="cp-kpi"><small>' + t + '</small><b>' + v + '</b><span>' + sub + '</span></div>'; }
+      var html = '<div class="cp-kpis">' +
+        kpi('Citas atendidas', a.atendidas, (dif === 0 ? 'Igual que en ' : Math.abs(dif) + (dif > 0 ? ' más que en ' : ' menos que en ')) + ant +
+          (d.enCurso ? ' (del 1 al ' + d.diaHoy + ')' : '') +
+          (a.pendientes ? ' · ' + a.pendientes + ' por venir' : '')) +
+        kpi('Reservas por la web', a.reservasWeb, a.fueraHorario ? a.fueraHorario + ' hechas con el local cerrado' : 'Hechas desde la web') +
+        kpi('Ingresos estimados', euros(a.ingresos), a.previstos ? '+ ' + euros(a.previstos) + ' en citas por venir' : 'De las citas atendidas') +
+        kpi('Clientes nuevos', a.clientesNuevos, a.clientesRepetidos + (a.clientesRepetidos === 1 ? ' cliente repetía' : ' clientes repetían')) +
+        kpi('Cancelaciones', a.canceladas, totalCitas ? pc + ' % de las citas del mes' : 'Sin citas este mes') +
+        kpi('Nota media', d.opiniones.mediaMes != null ? String(d.opiniones.mediaMes).replace('.', ',') + ' ★' : '—',
+          d.opiniones.mes ? d.opiniones.mes + (d.opiniones.mes === 1 ? ' opinión' : ' opiniones') + ' este mes' :
+          (d.opiniones.total ? 'Sin opiniones este mes · ' + String(d.opiniones.mediaTotal).replace('.', ',') + ' ★ en total' : 'Aún sin opiniones')) +
+        '</div>';
+      var max = Math.max.apply(null, d.semanas.map(function (s) { return s.n; }).concat([1]));
+      var ultima = d.semanas.length - 1;
+      html += '<section class="cp-box"><h2>Citas por semana</h2><div class="cp-bars" role="img" aria-label="Citas por semana, últimas 8 semanas">' +
+        d.semanas.map(function (s, i) {
+          var p = s.desde.split('-'), et = (+p[2]) + ' ' + MESES[+p[1] - 1];
+          var mostrar = i === ultima || (s.n === max && s.n > 0);
+          return '<div class="cp-bar' + (i === ultima ? ' cp-now' : '') + '" title="Semana del ' + et + ': ' + s.n + (s.n === 1 ? ' cita' : ' citas') + '">' +
+            '<em>' + (mostrar ? s.n : '') + '</em><i style="height:' + Math.round(s.n / max * 100) + '%"></i><span>' + et + '</span></div>';
+        }).join('') + '</div><p class="cp-nota">Citas confirmadas de cada semana (lunes a domingo).</p></section>';
+      function lista(t, items) {
+        if (!items.length) return '';
+        var mx = items[0].n;
+        return '<section class="cp-box"><h2>' + t + '</h2>' + items.map(function (x) {
+          return '<div class="cp-hb"><span>' + esc(x.nombre) + '</span><b>' + x.n + '</b><div class="tr"><i style="width:' + Math.round(x.n / mx * 100) + '%"></i></div></div>';
+        }).join('') + '</section>';
+      }
+      html += lista('Servicios más pedidos', d.servicios);
+      if (d.profesionales.length > 1) html += lista('Citas por profesional', d.profesionales);
+      html += '<p class="cp-nota">Los ingresos se calculan con los precios de la pestaña Servicios. "Con el local cerrado" = reservas hechas fuera del horario del negocio.</p>';
+      main.innerHTML = html;
+    }
     function pintar(data) {
-      $('cp-nav').hidden = false;
+      $('cp-nav').hidden = false; $('cp-tabs').hidden = false;
       var activas = data.citas.filter(function (c) { return c.estado === 'Confirmada'; });
       $('cp-sum').textContent = activas.length + (activas.length === 1 ? ' cita' : ' citas') + ' en estos 7 días';
       var html = '<form class="cp-closer" id="cp-cf"><div><label for="cp-c1">Cerrar desde</label><input id="cp-c1" type="date" required></div>' +

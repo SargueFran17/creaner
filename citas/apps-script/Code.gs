@@ -27,7 +27,7 @@
  * RECORDATORIO_HORAS antes de su cita. Se instala con `configurar` o desde el menú.
  */
 
-var VERSION = '1.6';
+var VERSION = '1.7';
 var HOJAS = {
   config: 'Config',
   servicios: 'Servicios',
@@ -362,6 +362,7 @@ function api_(d) {
     case 'panel_citas': return conPin_(d.pin, function () { return { ok: true, datos: panelCitas(d.pin, d.desde, d.hasta) }; });
     case 'panel_cancelar': return conPin_(d.pin, function () { panelCancelar(d.pin, d.id); return { ok: true }; });
     case 'panel_cerrar': return conPin_(d.pin, function () { panelCerrar(d.pin, d.desde, d.hasta, d.motivo); return { ok: true }; });
+    case 'panel_estadisticas': return conPin_(d.pin, function () { return { ok: true, datos: panelEstadisticas(d.pin, d.mes) }; });
   }
 }
 
@@ -1155,6 +1156,101 @@ function panelCancelar(pin, id) {
     if (f.r[13] !== 'Cancelada') cancelarFila_(f, cfg);
     return true;
   } finally { lock.releaseLock(); }
+}
+
+/* ================================== ESTADÍSTICAS ================================== */
+/* Resumen de un mes para el panel: citas atendidas, reservas hechas por la web (y cuántas
+   fuera del horario del negocio), ingresos estimados, cancelaciones, clientes nuevos y
+   repetidos, servicios más pedidos, citas por semana y nota media de las opiniones. */
+
+function precio_(v) { var n = parseFloat(String(v || '').replace(/[^\d,.-]/g, '').replace(',', '.')); return isNaN(n) ? 0 : n; }
+
+function claveCliente_(r) {
+  var tel = String(r[10] || '').replace(/\D/g, '').slice(-9);
+  return tel || String(r[11] || '').trim().toLowerCase() || String(r[9] || '').trim().toLowerCase();
+}
+
+/** ¿Se creó la reserva con el negocio cerrado? (según la pestaña Horario, tramos TODOS o de cualquier profesional) */
+function fueraDeHorario_(creada, horario) {
+  var m = String(creada || '').match(/^(\d{4}-\d{2}-\d{2}) (\d{1,2}):(\d{2})/);
+  if (!m) return false;
+  var dia = DIAS[diaSemana_(m[1])], min = parseInt(m[2], 10) * 60 + parseInt(m[3], 10);
+  return !horario.some(function (t) { return normDia_(t[1]) === dia && min >= aMin_(t[2]) && min < aMin_(t[3]); });
+}
+
+function resumenMes_(filas, mes, ahoraTxt, precios, horario, primeraVez, hastaDia) {
+  hastaDia = hastaDia || 31; // para comparar un mes en curso con el mismo tramo del mes anterior
+  var r = { atendidas: 0, pendientes: 0, canceladas: 0, reservasWeb: 0, fueraHorario: 0, ingresos: 0, previstos: 0,
+            clientesNuevos: 0, clientesRepetidos: 0, servicios: {}, profesionales: {} };
+  var vistos = {};
+  filas.forEach(function (x) {
+    var f = normFecha_(x[2]), est = String(x[13]).trim();
+    if (String(x[1]).slice(0, 7) === mes && parseInt(String(x[1]).slice(8, 10), 10) <= hastaDia) { r.reservasWeb++; if (fueraDeHorario_(x[1], horario)) r.fueraHorario++; }
+    if (!f || f.slice(0, 7) !== mes || parseInt(f.slice(8, 10), 10) > hastaDia) return;
+    if (est === 'Cancelada') { r.canceladas++; return; }
+    if (est !== 'Confirmada') return;
+    var p = precios[x[5]] !== undefined ? precios[x[5]] : 0;
+    if (f + ' ' + x[4] <= ahoraTxt) { r.atendidas++; r.ingresos += p; } else { r.pendientes++; r.previstos += p; }
+    r.servicios[x[6]] = (r.servicios[x[6]] || 0) + 1;
+    r.profesionales[x[8]] = (r.profesionales[x[8]] || 0) + 1;
+    var k = claveCliente_(x);
+    if (k && !vistos[k]) { vistos[k] = true; if (primeraVez[k] && primeraVez[k].slice(0, 7) === mes) r.clientesNuevos++; else r.clientesRepetidos++; }
+  });
+  r.ingresos = Math.round(r.ingresos * 100) / 100; r.previstos = Math.round(r.previstos * 100) / 100;
+  return r;
+}
+
+function ordenar_(obj) {
+  return Object.keys(obj).map(function (k) { return { nombre: k, n: obj[k] }; }).sort(function (a, b) { return b.n - a.n; });
+}
+
+function panelEstadisticas(pin, mes) {
+  comprobarPin_(pin);
+  var tz = tz_(), hoy = hoy_(tz);
+  mes = /^\d{4}-\d{2}$/.test(String(mes || '')) ? String(mes) : hoy.slice(0, 7);
+  var p = mes.split('-'), dPrev = new Date(+p[0], +p[1] - 2, 1);
+  var mesPrev = dPrev.getFullYear() + '-' + pad_(dPrev.getMonth() + 1);
+  var ahoraTxt = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm');
+  var filas = filas_(HOJAS.citas), horario = filas_(HOJAS.horario), precios = {};
+  filas_(HOJAS.servicios).forEach(function (s) { precios[String(s[0]).trim()] = precio_(s[3]); });
+
+  // Primera cita confirmada de cada cliente (para saber si es nuevo)
+  var primeraVez = {};
+  filas.forEach(function (x) {
+    if (String(x[13]).trim() !== 'Confirmada') return;
+    var k = claveCliente_(x), f = normFecha_(x[2]);
+    if (k && f && (!primeraVez[k] || f < primeraVez[k])) primeraVez[k] = f;
+  });
+
+  var act = resumenMes_(filas, mes, ahoraTxt, precios, horario, primeraVez);
+  var enCurso = mes === hoy.slice(0, 7), diaHoy = parseInt(hoy.slice(8, 10), 10);
+  var ant = resumenMes_(filas, mesPrev, ahoraTxt, precios, horario, primeraVez, enCurso ? diaHoy : 31);
+
+  // Citas por semana: 8 semanas (lunes a domingo) que acaban en la semana de hoy o en la última del mes elegido
+  var finMes = sumarDias_(mes + '-01', new Date(+p[0], +p[1], 0).getDate() - 1);
+  var ref = finMes < hoy ? finMes : hoy;
+  var lunes = sumarDias_(ref, -((diaSemana_(ref) + 6) % 7));
+  var semanas = [];
+  for (var i = 7; i >= 0; i--) semanas.push({ desde: sumarDias_(lunes, -7 * i), n: 0 });
+  filas.forEach(function (x) {
+    if (String(x[13]).trim() !== 'Confirmada') return;
+    var f = normFecha_(x[2]);
+    for (var j = 0; j < semanas.length; j++) if (f >= semanas[j].desde && f <= sumarDias_(semanas[j].desde, 6)) { semanas[j].n++; break; }
+  });
+
+  // Opiniones del mes y nota media global
+  var ops = filas_(HOJAS.opiniones), notaMes = [], notaTotal = [];
+  ops.forEach(function (o) {
+    var n = parseInt(o[5], 10); if (!(n >= 1 && n <= 5)) return;
+    notaTotal.push(n); if (String(o[0]).slice(0, 7) === mes) notaMes.push(n);
+  });
+  function media(a) { return a.length ? Math.round(a.reduce(function (s, n) { return s + n; }, 0) / a.length * 10) / 10 : null; }
+
+  return {
+    mes: mes, mesAnterior: mesPrev, actual: act, anterior: ant, enCurso: enCurso, diaHoy: diaHoy,
+    servicios: ordenar_(act.servicios).slice(0, 5), profesionales: ordenar_(act.profesionales),
+    semanas: semanas, opiniones: { mes: notaMes.length, mediaMes: media(notaMes), total: notaTotal.length, mediaTotal: media(notaTotal) }
+  };
 }
 
 function panelCerrar(pin, desde, hasta, motivo) {
