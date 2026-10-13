@@ -124,6 +124,12 @@ h2.title em.s{font-size:1.1em;color:var(--gold-text)}
 .work-main .work-art strong{font-size:clamp(28px,4vw,44px);font-weight:800;letter-spacing:-.03em;line-height:1}
 .work-main .work-art strong em.s{color:var(--gold);font-weight:400}
 .work-main .work-art .mini-btn{align-self:flex-start;margin-top:10px;background:#f3efe6;color:#121212;border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600}
+.work-main--salitre .work-art{background:#eef2ef;color:#1c2420}
+.work-main--salitre .work-art::after{display:none}
+.work-main--salitre .work-art small{color:#5d6a63}
+.work-main--salitre .work-art strong{font-family:Georgia,serif;font-weight:400;letter-spacing:-.01em;line-height:1.05}
+.work-main--salitre .work-art strong em.s{color:#2f6157;font-style:italic}
+.work-main--salitre .work-art .mini-btn{background:#2f6157;color:#fff}
 .work-info{padding:18px 20px 20px;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
 .work-info h3{font-size:18px;font-weight:700;letter-spacing:-.01em}
 .work-info p{font-size:14px;color:var(--muted)}
@@ -280,30 +286,30 @@ footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:1
         <p>Cada web se diseña a partir del negocio: su estilo, sus servicios y su forma de trabajar.</p>
       </div>
       <div class="works">
-        <article class="work work-main">
+        <article class="work work-main work-main--salitre">
           <div class="work-art">
-            <small>Barbería</small>
-            <strong>Teknik <em class="s">Cuts</em></strong>
-            <span class="mini-btn">Reservar cita</span>
+            <small>Proyecto de ejemplo · Estética</small>
+            <strong>Tu hora de calma, <em class="s">reservada</em>.</strong>
+            <span class="mini-btn">Reservar tratamiento</span>
           </div>
           <div class="work-info">
             <div>
-              <h3>Teknik Cuts</h3>
-              <p>Web de barbería con reserva online en menos de un minuto.</p>
-              <div class="tags"><span class="tag">Reservas</span><span class="tag">Galería de trabajos</span><span class="tag">WhatsApp</span></div>
+              <h3>Salitre Estudio</h3>
+              <p>Reserva en 4 pasos: tratamiento, profesional, día y hora.</p>
+              <div class="tags"><span class="tag">Reservas</span><span class="tag">Precios claros</span><span class="tag">Tarjeta regalo</span></div>
             </div>
-            <a class="link-out" href="https://teknikcuts.github.io/teknikcuts-web/" target="_blank" rel="noopener">Ver web ↗</a>
+            <a class="link-out" href="demos/salitre/">Ver web ↗</a>
           </div>
         </article>
         <div class="works-side">
           <article class="work work-demo">
-            <div class="demo-art" style="background:#eef2ef"><small style="color:#5d6a63">Proyecto de ejemplo · Estética</small><strong style="color:#1c2420;font-family:Georgia,serif;font-weight:400;letter-spacing:-.01em">Tu hora de calma, <span style="color:#2f6157;font-style:italic">reservada</span>.</strong></div>
+            <div class="demo-art" style="background:#121212"><small style="color:#bdb7ab">Barbería</small><strong style="color:#f3efe6">Teknik <span style="color:var(--gold);font-family:var(--f-serif);font-style:italic;font-weight:400">Cuts</span></strong></div>
             <div class="work-info">
               <div>
-                <h3>Salitre Estudio</h3>
-                <p>Reserva en 4 pasos: tratamiento, profesional, día y hora.</p>
+                <h3>Teknik Cuts</h3>
+                <p>Web de barbería con reserva online en menos de un minuto.</p>
               </div>
-              <a class="link-out" href="demos/salitre/">Ver web ↗</a>
+              <a class="link-out" href="https://teknikcuts.github.io/teknikcuts-web/" target="_blank" rel="noopener">Ver web ↗</a>
             </div>
           </article>
           <article class="work work-demo">
