@@ -452,7 +452,7 @@ footer.ft .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10
   });
 
   /* quote submit: con API_PRESUPUESTOS se envía de verdad (Creaner · presupuesto.js); sin ella, modo demo */
-  var API_PRESUPUESTOS='';
+  var API_PRESUPUESTOS='https://script.google.com/macros/s/AKfycbwseVKzohzxX1BJPayVqcDMsf9ODLuMWSLVGHMa5r4au03hFncwD2YQ5K0O9tW0Kmbeew/exec';
   /* la galería de trabajos sale de la misma hoja (Creaner · galeria.js) */
   if(API_PRESUPUESTOS){ var gal=document.querySelector('[data-creaner-galeria]'); if(gal) gal.setAttribute('data-api',API_PRESUPUESTOS); }
   var quote=document.getElementById('quote');
