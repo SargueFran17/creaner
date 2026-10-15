@@ -28,7 +28,7 @@
  * RECORDATORIO_HORAS antes de su cita. Se instala con `configurar` o desde el menú.
  */
 
-var VERSION = '2.0';
+var VERSION = '2.1';
 var HOJAS = {
   config: 'Config',
   servicios: 'Servicios',
@@ -80,6 +80,7 @@ function configurar() {
     ['DIRECCION', 'Calle, número, ciudad', 'Se muestra al cliente en el email'],
     ['INTERVALO_MIN', '30', 'Cada cuántos minutos empiezan los huecos (15, 20, 30…)'],
     ['ANTELACION_MIN_HORAS', '2', 'Horas mínimas de antelación para reservar'],
+    ['ANTELACION_TRAMOS', '', 'Opcional: antelación distinta según la hora a la que reserva el cliente. Formato HORA=HORAS separados por ; (p. ej. 14:00=1.5 → desde las 14:00 bastan 1,5 h; antes rige ANTELACION_MIN_HORAS)'],
     ['DIAS_VISTA', '30', 'Cuántos días hacia delante se puede reservar'],
     ['CANCELACION_HORAS', '24', 'Hasta cuántas horas antes puede cancelar el cliente'],
     ['RECORDATORIO_HORAS', '26', 'Cuántas horas antes de la cita se envía el recordatorio al cliente. Ponlo por encima de CANCELACION_HORAS para que aún pueda cancelar desde el email. 0 = sin recordatorios'],
@@ -207,11 +208,27 @@ function filas_(nombre) {
     .filter(function (r) { return r.join('').trim() !== ''; });
 }
 
+/** "14:00=1.5; 19:00=1" → [{desde:840,horas:1.5},{desde:1140,horas:1}] ordenado por hora. */
+function leerTramosAntelacion_(txt) {
+  return String(txt || '').split(/[;\n]/).map(function (t) {
+    var m = t.trim().match(/^(\d{1,2})[:.h]?(\d{2})?\s*=\s*(\d+(?:[.,]\d+)?)/i);
+    return m ? { desde: parseInt(m[1], 10) * 60 + parseInt(m[2] || '0', 10), horas: parseFloat(m[3].replace(',', '.')) } : null;
+  }).filter(Boolean).sort(function (a, b) { return a.desde - b.desde; });
+}
+
+/** Antelación que se exige ahora mismo: la del último tramo cuya hora ya ha llegado hoy, o la general. */
+function antelacionHoras_(cfg, tz) {
+  var ahora = aMin_(Utilities.formatDate(new Date(), tz, 'HH:mm')), h = cfg.ANTELACION_MIN_HORAS;
+  (cfg.ANTELACION_TRAMOS || []).forEach(function (t) { if (ahora >= t.desde) h = t.horas; });
+  return h;
+}
+
 function leerConfig_() {
   var c = {};
   filas_(HOJAS.config).forEach(function (r) { c[String(r[0]).trim()] = String(r[1]).trim(); });
   c.INTERVALO_MIN = parseInt(c.INTERVALO_MIN, 10) || 30;
-  c.ANTELACION_MIN_HORAS = parseFloat(c.ANTELACION_MIN_HORAS) || 0;
+  c.ANTELACION_MIN_HORAS = parseFloat(String(c.ANTELACION_MIN_HORAS).replace(',', '.')) || 0;
+  c.ANTELACION_TRAMOS = leerTramosAntelacion_(c.ANTELACION_TRAMOS);
   c.DIAS_VISTA = parseInt(c.DIAS_VISTA, 10) || 30;
   c.CANCELACION_HORAS = parseFloat(c.CANCELACION_HORAS) || 0;
   // Email del negocio: si falta o no es válido en Config, se usa el de la cuenta de Google dueña del script.
@@ -300,7 +317,7 @@ function huecos_(fecha, servicioId, proId, ctx) {
   });
   var dia = DIAS[diaSemana_(fecha)];
   var ahora = Utilities.formatDate(new Date(), ctx.tz, 'yyyy-MM-dd HH:mm');
-  var limite = new Date(new Date().getTime() + ctx.cfg.ANTELACION_MIN_HORAS * 3600000);
+  var limite = new Date(new Date().getTime() + antelacionHoras_(ctx.cfg, ctx.tz) * 3600000);
   var limiteTxt = Utilities.formatDate(limite, ctx.tz, 'yyyy-MM-dd HH:mm');
   var porHora = {};
 
