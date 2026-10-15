@@ -160,6 +160,8 @@ h2.t{font-family:var(--f-d);font-weight:800;font-size:clamp(30px,4.4vw,46px);lin
 .work .inf{padding:14px 16px 16px}
 .work h3{font-size:16px;font-weight:700}
 .work p{font-size:14px;color:var(--muted)}
+.work p.lug{font-size:12.5px;font-weight:600;color:var(--deep-2);margin-bottom:4px}
+.work .ph[data-g]{background:var(--line)}
 
 /* reviews */
 .revs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
@@ -353,10 +355,12 @@ footer.ft .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10
   <section class="sec" id="trabajos">
     <div class="wrap">
       <div class="sec-head"><p class="kicker">Trabajos</p><h2 class="t">Instalaciones recientes</h2></div>
-      <div class="works">
+      <div class="works" data-creaner-galeria data-api="">
         <article class="work"><div class="ph" style="background:linear-gradient(160deg,#dcf0f9,#b9e0f1)"><span>Foto real del trabajo</span></div><div class="inf"><h3>Split en salón · Los Boliches</h3><p>3.000 frigorías, instalado en una mañana.</p></div></article>
         <article class="work"><div class="ph" style="background:repeating-linear-gradient(90deg,#e6eef3 0 18px,#d6e3ea 18px 20px)"><span>Foto real del trabajo</span></div><div class="inf"><h3>Conductos en chalet · Mijas</h3><p>Toda la casa con una sola máquina y rejillas por estancia.</p></div></article>
         <article class="work"><div class="ph" style="background:linear-gradient(160deg,#fdeadb,#f6c9a2)"><span>Foto real del trabajo</span></div><div class="inf"><h3>Local comercial · Benalmádena</h3><p>Cassette de techo para una cafetería de 80 m².</p></div></article>
+        <!-- Con la API puesta, Creaner · galeria.js cambia estas tarjetas por los trabajos reales de la pestaña Galería -->
+        <template data-galeria><article class="work"><div class="ph" data-g="foto"><span data-g="nfotos"></span></div><div class="inf"><h3 data-g="titulo"></h3><p class="lug" data-g="lugar"></p><p data-g="descripcion"></p></div></article></template>
       </div>
     </div>
   </section>
@@ -449,6 +453,8 @@ footer.ft .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10
 
   /* quote submit: con API_PRESUPUESTOS se envía de verdad (Creaner · presupuesto.js); sin ella, modo demo */
   var API_PRESUPUESTOS='';
+  /* la galería de trabajos sale de la misma hoja (Creaner · galeria.js) */
+  if(API_PRESUPUESTOS){ var gal=document.querySelector('[data-creaner-galeria]'); if(gal) gal.setAttribute('data-api',API_PRESUPUESTOS); }
   var quote=document.getElementById('quote');
   quote.addEventListener('submit',function(e){
     e.preventDefault();
@@ -480,5 +486,6 @@ footer.ft .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10
 </script>
 
 <script src="../../citas/presupuesto.js" defer></script>
+<script src="../../citas/galeria.js" defer></script>
 </body>
 </html>

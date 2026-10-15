@@ -90,12 +90,25 @@ Qué pasa con cada solicitud:
 - Estadísticas: solicitudes recibidas, aceptadas (%), importe aceptado, sin contestar, trabajos más pedidos y zonas.
 - Hasta 3 fotos por solicitud, reducidas en el móvil a 1600 px. Campo trampa contra robots.
 
+## 5e. Galería de trabajos (incluida en la web de presupuestos)
+La web enseña los trabajos que sube Creaner cada mes. Las fotos viven en el Drive del negocio (carpeta "Creaner · Galería") y los datos en la pestaña **Galería** de su hoja.
+1. En Config: **GALERIA = SI** y **GALERIA_MAX** = cuántos trabajos enseña la web (12 por defecto: los más recientes visibles). **GALERIA_PIN** se crea solo: es el PIN de Creaner, distinto del PIN del panel. No se lo damos al negocio.
+2. Ejecuta `configurar` (crea la pestaña Galería y, en hojas antiguas, añade los ajustes que falten) y publica una versión nueva.
+3. En la web del negocio:
+   - Galería ya hecha: `<div id="creaner-galeria" data-api="URL_DEL_PASO_3"></div><script src="https://creaner.es/citas/galeria.js" defer></script>` (colores con `--cg-accent`, `--cg-radius`, `--cg-cols`).
+   - Con el diseño de la web: el contenedor lleva `data-creaner-galeria data-api="…"` y un `<template data-galeria>` con una tarjeta marcada con `data-g="foto|titulo|descripcion|lugar|zona|trabajo|fecha|nfotos"` (ver la demo de Terral Clima). Las tarjetas de ejemplo se quedan si no hay trabajos o la hoja no responde.
+   - Al tocar una foto se abre un visor con todas las fotos del trabajo.
+4. **Subir trabajos:** https://creaner.es/citas/galeria.html (desde el móvil). La primera vez, *Añadir cliente* con su URL /exec y su GALERIA_PIN. Por trabajo: 1–4 fotos (la primera es la portada; se reducen a 1600 px), título, tipo, zona, fecha y descripción corta. Los presupuestos marcados como **Terminado** salen como atajo para rellenar.
+5. Desde la misma página: editar, cambiar la portada, quitar fotos, ocultar o borrar (las fotos borradas van a la papelera del Drive del negocio). Cada cliente indica cuántos días hace del último trabajo: en ámbar si pasa de un mes.
+6. Los cambios se ven en la web al momento. Las fotos quedan como "cualquiera con el enlace puede ver" para que la web pueda mostrarlas.
+
 ## 6. Comprobar antes de entregar
 - [ ] Hacer una reserva de prueba desde la web (con tu email) y comprobar que llegan los 2 emails.
 - [ ] Comprobar que existe el activador `enviarRecordatorios` y que el recordatorio de prueba llega bien.
 - [ ] Abrir el enlace "Cambia o cancela tu cita aquí" del email: cambiar la cita a otra hora y comprobar que la fila de Citas se actualiza y llegan los avisos; después, cancelarla.
 - [ ] Entrar al panel con el PIN y ver la cita.
 - [ ] Borrar la fila de prueba de la pestaña Citas.
+- [ ] Si tiene galería: subir un trabajo de prueba desde creaner.es/citas/galeria.html, comprobar que sale en su web y borrarlo.
 
 ## Cambiar o cancelar (cliente)
 - Los emails de confirmación y recordatorio llevan el enlace **Cambia o cancela tu cita aquí** (`URL_WEB?accion=cita&id=…&t=…`).

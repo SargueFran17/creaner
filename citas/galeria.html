@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Galerías · Creaner</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0d1d38">
+<link rel="icon" type="image/svg+xml" href="../assets/creaner-simbolo.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap">
+<style>
+  :root{--navy:#0d1d38;--grey:#eef0f3;--ink:#0e1726;--muted:#586377;--gold:#e0b03f;--goldt:#8c6710;--line:#d9dee6;--white:#fff;--ok:#2f7a4f;--okbg:#e6f2ea;--warn:#8c5a00;--warnbg:#fbf0d9;--bad:#a2463a;--badbg:#f8e5e2;--r:14px}
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--grey);color:var(--ink);font-family:"Hanken Grotesk",system-ui,sans-serif;line-height:1.5;font-size:16px}
+  header{background:var(--navy);color:#fff;padding:14px 16px calc(14px);position:sticky;top:0;z-index:5}
+  header .in{max-width:760px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  header img{height:24px;display:block}
+  header span{font-size:13px;opacity:.75}
+  main{max-width:760px;margin:0 auto;padding:16px 16px 80px}
+  h1{font-size:26px;letter-spacing:-.02em;margin:8px 0 4px;line-height:1.15}
+  h2{font-size:18px;margin:0 0 12px;letter-spacing:-.01em}
+  p{margin:0}
+  .muted{color:var(--muted);font-size:14px}
+  .card{background:var(--white);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-top:14px}
+  label{font-size:14px;font-weight:600;display:block;margin-bottom:5px}
+  input,select,textarea{width:100%;font:inherit;font-size:16px;color:inherit;background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 12px}
+  textarea{min-height:84px;resize:vertical}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:transparent}
+  .f{margin-top:12px}
+  .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:999px;background:var(--navy);color:#fff;font:inherit;font-weight:700;padding:12px 18px;min-height:46px;cursor:pointer;text-decoration:none}
+  .btn.gold{background:var(--gold);color:var(--navy)}
+  .btn.ghost{background:transparent;color:var(--navy);border:1px solid var(--line)}
+  .btn.sm{min-height:36px;padding:7px 12px;font-size:14px;font-weight:600}
+  .btn.danger{color:var(--bad)}
+  .btn:disabled{opacity:.55;cursor:wait}
+  .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+  .chip{flex:0 0 auto;border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;color:var(--ink)}
+  .chip[aria-pressed="true"]{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .estado{display:flex;gap:10px;align-items:flex-start;border-radius:12px;padding:12px 14px;font-size:14px;margin-top:12px}
+  .estado b{display:block;font-size:15px}
+  .estado.ok{background:var(--okbg);color:var(--ok)}
+  .estado.warn{background:var(--warnbg);color:var(--warn)}
+  .estado.bad{background:var(--badbg);color:var(--bad)}
+  .msg{font-size:14px;margin-top:10px;min-height:1em}
+  .msg.err{color:var(--bad)} .msg.ok{color:var(--ok)}
+  .drop{border:1.5px dashed var(--line);border-radius:12px;padding:16px;text-align:center;color:var(--muted);font-size:14px;cursor:pointer;display:block;font-weight:500}
+  .drop b{color:var(--navy)}
+  .drop input{position:absolute;opacity:0;width:1px;height:1px}
+  .thumbs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
+  .thumb{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--grey)}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb .tag{position:absolute;left:6px;top:6px;background:var(--gold);color:var(--navy);font-size:11px;font-weight:800;border-radius:6px;padding:2px 6px}
+  .thumb button{position:absolute;right:4px;top:4px;width:28px;height:28px;border-radius:50%;border:0;background:rgba(13,29,56,.8);color:#fff;font-size:16px;line-height:1;cursor:pointer}
+  .thumb button.cov{right:auto;left:4px;top:auto;bottom:4px;width:auto;border-radius:6px;font-size:11px;padding:0 6px;height:22px}
+  .list{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+  .item{display:grid;grid-template-columns:76px minmax(0,1fr);gap:12px;align-items:start;border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff}
+  .item.off{opacity:.62}
+  .item .im{width:76px;height:76px;border-radius:9px;object-fit:cover;background:var(--grey);display:block}
+  .item h3{font-size:15px;margin:0;line-height:1.3;overflow-wrap:anywhere}
+  .item .meta{font-size:13px;color:var(--muted);margin-top:2px}
+  .badge{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:1px 7px;margin-left:4px;vertical-align:1px}
+  .badge.on{background:var(--okbg);color:var(--ok)} .badge.hid{background:var(--grey);color:var(--muted)} .badge.out{background:var(--warnbg);color:var(--warn)}
+  .item .btns{margin-top:8px;gap:6px}
+  .check{display:flex;gap:10px;align-items:center;font-weight:500;margin-top:12px}
+  .check input{width:22px;height:22px;flex:0 0 auto;accent-color:var(--navy)}
+  .neg{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .neg a{font-size:14px;color:var(--navy);font-weight:600}
+  .hidden{display:none!important}
+  .count{font-size:13px;color:var(--muted);text-align:right;margin-top:4px}
+  dialog{border:0;border-radius:var(--r);padding:0;max-width:min(520px,calc(100vw - 24px));width:100%}
+  dialog::backdrop{background:rgba(13,29,56,.5)}
+  dialog .card{margin:0;border:0}
+  @media (max-width:420px){ .thumbs{grid-template-columns:repeat(2,minmax(0,1fr))} }
+</style>
+</head>
+<body>
+<header><div class="in"><img src="../assets/creaner-logo-largo-blanco.svg" alt="Creaner"><span>Galerías de clientes</span></div></header>
+<main>
+  <h1>Galería de trabajos</h1>
+  <p class="muted">Sube cada mes los trabajos nuevos de cada cliente. La web los muestra sola (los <span id="max-txt">12</span> más recientes visibles).</p>
+
+  <section class="card" id="sec-negocios">
+    <div class="neg"><h2 style="margin:0">Cliente</h2><button class="btn ghost sm" type="button" id="btn-anadir">+ Añadir cliente</button></div>
+    <div class="chips" id="negocios" style="margin-top:12px" role="group" aria-label="Clientes"></div>
+    <p class="muted" id="sin-negocios">Todavía no hay clientes. Añade uno con la URL /exec de su hoja y su GALERIA_PIN (pestaña Config).</p>
+    <div id="estado-negocio"></div>
+  </section>
+
+  <section class="card hidden" id="sec-nuevo">
+    <h2 id="form-titulo">Nuevo trabajo</h2>
+    <div id="sugerencias" class="hidden">
+      <p class="muted" style="margin-bottom:8px">Presupuestos terminados sin foto en la galería (toca para rellenar):</p>
+      <div class="chips" id="terminadas"></div>
+    </div>
+    <div id="zona-fotos">
+      <label class="drop f" for="fotos"><b>Elegir fotos</b> o hacerlas con el móvil<br>Hasta 4 · la primera es la portada<input type="file" id="fotos" accept="image/*" multiple></label>
+      <div class="thumbs" id="thumbs"></div>
+    </div>
+    <div class="f"><label for="titulo">Título</label><input id="titulo" maxlength="80" placeholder="Split en salón · Los Boliches"></div>
+    <div class="row">
+      <div class="f"><label for="trabajo">Tipo de trabajo</label><input id="trabajo" list="lista-trabajos" maxlength="60" placeholder="Instalación"><datalist id="lista-trabajos"></datalist></div>
+      <div class="f"><label for="zona">Zona</label><input id="zona" list="lista-zonas" maxlength="60" placeholder="Fuengirola"><datalist id="lista-zonas"></datalist></div>
+    </div>
+    <div class="row">
+      <div class="f"><label for="fecha">Fecha del trabajo</label><input id="fecha" type="date"></div>
+    </div>
+    <div class="f"><label for="descripcion">Descripción corta</label><textarea id="descripcion" maxlength="300" placeholder="3.000 frigorías, instalado en una mañana."></textarea><p class="count"><span id="desc-n">0</span>/300</p></div>
+    <label class="check"><input type="checkbox" id="visible" checked> Mostrar en la web</label>
+    <div class="btns">
+      <button class="btn gold" type="button" id="btn-guardar">Subir trabajo</button>
+      <button class="btn ghost hidden" type="button" id="btn-cancelar">Cancelar edición</button>
+    </div>
+    <p class="msg" id="msg-form" aria-live="polite"></p>
+  </section>
+
+  <section class="card hidden" id="sec-lista">
+    <h2>Trabajos subidos <span class="muted" id="lista-n"></span></h2>
+    <div class="list" id="lista"></div>
+  </section>
+</main>
+
+<dialog id="dlg">
+  <form class="card" method="dialog" id="dlg-form">
+    <h2>Añadir cliente</h2>
+    <div class="f"><label for="n-api">URL del script (termina en /exec)</label><input id="n-api" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec"></div>
+    <div class="f"><label for="n-pin">GALERIA_PIN</label><input id="n-pin" inputmode="numeric" autocomplete="off"></div>
+    <label class="check"><input type="checkbox" id="n-rec" checked> Recordar el PIN en este dispositivo</label>
+    <p class="msg" id="msg-dlg" aria-live="polite"></p>
+    <div class="btns"><button class="btn" type="button" id="dlg-ok">Comprobar y guardar</button><button class="btn ghost" value="cancel">Cancelar</button></div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  'use strict';
+  var KEY = 'creaner_galerias', MAX_FOTOS = 4, LADO = 1600;
+  var negocios = leer(), actual = null, datos = null, nuevas = [], editando = null, ordenEdit = null, enviando = false;
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function leer() { try { return JSON.parse(localStorage.getItem(KEY) || '[]') || []; } catch (x) { return []; } }
+  function guardar() { try { localStorage.setItem(KEY, JSON.stringify(negocios)); } catch (x) {} }
+  function hoy() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function fechaBonita(f) {
+    var m = String(f || '').match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return f || '';
+    return +m[3] + ' ' + ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'][+m[2] - 1] + ' ' + m[1];
+  }
+  function dias(f) { var m = String(f || '').match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return null; return Math.floor((Date.now() - new Date(+m[1], +m[2] - 1, +m[3]).getTime()) / 864e5); }
+  function msg(el, t, tipo) { el.textContent = t || ''; el.className = 'msg' + (tipo ? ' ' + tipo : ''); }
+
+  function post(api, body) {
+    return fetch(api, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json(); })
+      .then(function (r) { if (!r || r.ok === false) { var e = new Error((r && r.error) || 'Error inesperado.'); e.pin = r && r.pin; throw e; } return r; });
+  }
+  function pinDe(n) { return n.pin || sessionPin[n.api] || ''; }
+  var sessionPin = {};
+
+  function reducir(file) {
+    return new Promise(function (ok) {
+      if (!file || !/^image\//.test(file.type)) return ok(null);
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        var k = Math.min(1, LADO / Math.max(img.width, img.height));
+        var c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        ok({ tipo: 'image/jpeg', datos: c.toDataURL('image/jpeg', 0.82) });
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); ok(null); };
+      img.src = url;
+    });
+  }
+
+  /* ------------------------------- clientes ------------------------------- */
+  function pintarNegocios() {
+    $('sin-negocios').classList.toggle('hidden', negocios.length > 0);
+    $('negocios').innerHTML = negocios.map(function (n, i) {
+      return '<button type="button" class="chip" data-i="' + i + '" aria-pressed="' + (actual === n) + '">' + esc(n.nombre || 'Cliente') + '</button>';
+    }).join('');
+    Array.prototype.forEach.call($('negocios').querySelectorAll('.chip'), function (b) {
+      b.onclick = function () { abrir(negocios[+b.getAttribute('data-i')]); };
+    });
+  }
+
+  $('btn-anadir').onclick = function () { $('n-api').value = ''; $('n-pin').value = ''; msg($('msg-dlg')); $('dlg').showModal(); };
+  $('dlg-ok').onclick = function () {
+    var api = $('n-api').value.trim(), pin = $('n-pin').value.trim(), b = this;
+    if (!/^https:\/\/script\.google(usercontent)?\.com\/.+\/exec$/.test(api)) return msg($('msg-dlg'), 'La URL tiene que ser la de la implementación y terminar en /exec.', 'err');
+    if (!pin) return msg($('msg-dlg'), 'Escribe el GALERIA_PIN de su pestaña Config.', 'err');
+    b.disabled = true; msg($('msg-dlg'), 'Comprobando…');
+    post(api, { accion: 'galeria_admin', pin: pin }).then(function (r) {
+      var n = negocios.filter(function (x) { return x.api === api; })[0];
+      if (!n) { n = { api: api }; negocios.push(n); }
+      n.nombre = r.negocio || 'Cliente';
+      if ($('n-rec').checked) n.pin = pin; else { delete n.pin; sessionPin[api] = pin; }
+      guardar(); $('dlg').close(); abrir(n, r);
+    }).catch(function (x) { msg($('msg-dlg'), x.message, 'err'); }).then(function () { b.disabled = false; });
+  };
+
+  function abrir(n, yaCargado) {
+    actual = n; pintarNegocios(); limpiarForm();
+    $('estado-negocio').innerHTML = '<p class="muted" style="margin-top:12px">Cargando…</p>';
+    var pin = pinDe(n);
+    if (!pin) { pin = prompt('GALERIA_PIN de ' + n.nombre + ':') || ''; sessionPin[n.api] = pin.trim(); }
+    (yaCargado ? Promise.resolve(yaCargado) : post(n.api, { accion: 'galeria_admin', pin: pinDe(n) })).then(function (r) {
+      datos = r; if (r.negocio && r.negocio !== n.nombre) { n.nombre = r.negocio; guardar(); pintarNegocios(); }
+      pintarTodo();
+    }).catch(function (x) {
+      if (x.pin) { delete n.pin; delete sessionPin[n.api]; guardar(); }
+      $('estado-negocio').innerHTML = '<div class="estado bad"><div><b>No se ha podido abrir</b>' + esc(x.message) +
+        (x.pin ? ' Vuelve a tocar el cliente para escribir el PIN.' : '') + '</div></div>' +
+        '<div class="btns"><button class="btn ghost sm danger" type="button" id="btn-quitar">Quitar este cliente del dispositivo</button></div>';
+      $('btn-quitar').onclick = quitarNegocio;
+      $('sec-nuevo').classList.add('hidden'); $('sec-lista').classList.add('hidden');
+    });
+  }
+
+  function quitarNegocio() {
+    if (!actual || !confirm('¿Quitar ' + actual.nombre + ' de este dispositivo? Sus fotos y su hoja no se tocan.')) return;
+    negocios = negocios.filter(function (x) { return x !== actual; }); guardar(); actual = null; datos = null;
+    $('estado-negocio').innerHTML = ''; $('sec-nuevo').classList.add('hidden'); $('sec-lista').classList.add('hidden'); pintarNegocios();
+  }
+
+  /* ------------------------------- estado y lista ------------------------------- */
+  function pintarTodo() {
+    var t = datos.trabajos || [], ultimo = t.map(function (x) { return x.subido || x.fecha; }).sort().pop();
+    var d = dias(ultimo), visibles = t.filter(function (x) { return x.visible && x.fotos.length; }).length;
+    var cls = d === null ? 'bad' : d <= 31 ? 'ok' : 'warn';
+    var tit = d === null ? 'Sin trabajos todavía' : d === 0 ? 'Último trabajo subido hoy' : 'Último trabajo subido hace ' + d + (d === 1 ? ' día' : ' días');
+    var sub = d !== null && d > 31 ? 'Toca la actualización de este mes.' : visibles + ' visibles en la web (muestra hasta ' + datos.max + ').';
+    $('max-txt').textContent = datos.max;
+    $('estado-negocio').innerHTML = (datos.activa ? '' : '<div class="estado warn"><div><b>Galería desactivada en su web</b>Pon GALERIA = SI en la pestaña Config de su hoja para que se vea.</div></div>') +
+      '<div class="estado ' + cls + '"><div><b>' + tit + '</b>' + sub + '</div></div>' +
+      '<div class="btns">' + (datos.web ? '<a class="btn ghost sm" href="' + esc(datos.web) + '#trabajos" target="_blank" rel="noopener">Ver su web</a>' : '') +
+      '<button class="btn ghost sm" type="button" id="btn-recargar">Recargar</button><button class="btn ghost sm danger" type="button" id="btn-quitar">Quitar del dispositivo</button></div>';
+    $('btn-recargar').onclick = function () { abrir(actual); };
+    $('btn-quitar').onclick = quitarNegocio;
+
+    $('lista-trabajos').innerHTML = (datos.trabajosTipos || []).map(function (x) { return '<option value="' + esc(x) + '">'; }).join('');
+    $('lista-zonas').innerHTML = (datos.zonas || []).map(function (x) { return '<option value="' + esc(x) + '">'; }).join('');
+    var term = datos.terminadas || [];
+    $('sugerencias').classList.toggle('hidden', !term.length || !!editando);
+    $('terminadas').innerHTML = term.map(function (s, i) {
+      return '<button type="button" class="chip" data-i="' + i + '">' + esc([s.trabajo, s.zona].filter(Boolean).join(' · ') || s.id) + ' · ' + esc(fechaBonita(s.fecha)) + '</button>';
+    }).join('');
+    Array.prototype.forEach.call($('terminadas').querySelectorAll('.chip'), function (b) {
+      b.onclick = function () {
+        var s = term[+b.getAttribute('data-i')];
+        Array.prototype.forEach.call($('terminadas').querySelectorAll('.chip'), function (c) { c.setAttribute('aria-pressed', c === b); });
+        $('trabajo').value = s.trabajo || ''; $('zona').value = s.zona || ''; $('fecha').value = s.fecha || hoy();
+        if (!$('titulo').value) $('titulo').value = [s.trabajo, s.zona].filter(Boolean).join(' · ');
+        $('btn-guardar').setAttribute('data-solicitud', s.id);
+      };
+    });
+    $('sec-nuevo').classList.remove('hidden');
+    pintarLista();
+  }
+
+  function pintarLista() {
+    var t = datos.trabajos || [], n = 0;
+    $('sec-lista').classList.toggle('hidden', !t.length);
+    $('lista-n').textContent = '(' + t.length + ')';
+    $('lista').innerHTML = t.map(function (x, i) {
+      var en = x.visible && x.fotos.length; if (en) n++;
+      var badge = !x.visible ? '<span class="badge hid">Oculto</span>' : n > datos.max ? '<span class="badge out">No cabe en la web</span>' : '<span class="badge on">En la web</span>';
+      return '<article class="item' + (x.visible ? '' : ' off') + '">' +
+        '<img class="im" alt="" loading="lazy" src="' + esc(x.fotos[0] || '') + '" onerror="this.removeAttribute(\'src\')">' +
+        '<div><h3>' + esc(x.titulo) + badge + '</h3><p class="meta">' + esc([x.trabajo, x.zona, fechaBonita(x.fecha)].filter(Boolean).join(' · ')) + ' · ' + x.fotos.length + (x.fotos.length === 1 ? ' foto' : ' fotos') + '</p>' +
+        '<div class="btns"><button class="btn ghost sm" type="button" data-a="editar" data-i="' + i + '">Editar</button>' +
+        '<button class="btn ghost sm" type="button" data-a="visible" data-i="' + i + '">' + (x.visible ? 'Ocultar' : 'Mostrar') + '</button>' +
+        '<button class="btn ghost sm danger" type="button" data-a="borrar" data-i="' + i + '">Borrar</button></div></div></article>';
+    }).join('');
+    Array.prototype.forEach.call($('lista').querySelectorAll('button[data-a]'), function (b) {
+      b.onclick = function () { accion(b.getAttribute('data-a'), t[+b.getAttribute('data-i')], b); };
+    });
+  }
+
+  function accion(a, x, b) {
+    if (a === 'editar') return empezarEdicion(x);
+    var cambios = a === 'visible' ? { visible: !x.visible } : { borrar: true };
+    if (a === 'borrar' && !confirm('¿Borrar "' + x.titulo + '"? Sus fotos van a la papelera del Drive del cliente.')) return;
+    b.disabled = true;
+    post(actual.api, { accion: 'galeria_editar', pin: pinDe(actual), id: x.id, cambios: cambios })
+      .then(function () { abrir(actual); })
+      .catch(function (e) { alert(e.message); b.disabled = false; });
+  }
+
+  /* ------------------------------- formulario ------------------------------- */
+  function limpiarForm() {
+    editando = null; ordenEdit = null; nuevas = [];
+    ['titulo', 'trabajo', 'zona', 'descripcion'].forEach(function (k) { $(k).value = ''; });
+    $('fecha').value = hoy(); $('visible').checked = true; $('desc-n').textContent = '0';
+    $('fotos').value = ''; $('btn-guardar').removeAttribute('data-solicitud');
+    $('form-titulo').textContent = 'Nuevo trabajo'; $('btn-guardar').textContent = 'Subir trabajo';
+    $('btn-cancelar').classList.add('hidden'); $('zona-fotos').querySelector('.drop').classList.remove('hidden');
+    msg($('msg-form')); pintarThumbs();
+    if (datos) $('sugerencias').classList.toggle('hidden', !(datos.terminadas || []).length);
+  }
+
+  function empezarEdicion(x) {
+    limpiarForm(); editando = x; ordenEdit = x.fotoIds.slice();
+    $('titulo').value = x.titulo; $('trabajo').value = x.trabajo; $('zona').value = x.zona; $('fecha').value = x.fecha;
+    $('descripcion').value = x.descripcion; $('desc-n').textContent = x.descripcion.length; $('visible').checked = x.visible;
+    $('form-titulo').textContent = 'Editar trabajo'; $('btn-guardar').textContent = 'Guardar cambios';
+    $('btn-cancelar').classList.remove('hidden'); $('sugerencias').classList.add('hidden');
+    $('zona-fotos').querySelector('.drop').classList.add('hidden');
+    pintarThumbs(); $('sec-nuevo').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  $('btn-cancelar').onclick = limpiarForm;
+  $('descripcion').oninput = function () { $('desc-n').textContent = this.value.length; };
+
+  $('fotos').onchange = function () {
+    var files = Array.prototype.slice.call(this.files || []), sitio = MAX_FOTOS - nuevas.length;
+    if (files.length > sitio) msg($('msg-form'), 'Máximo ' + MAX_FOTOS + ' fotos por trabajo: se han cogido las primeras.', 'err'); else msg($('msg-form'));
+    files.slice(0, Math.max(0, sitio)).forEach(function (f) { nuevas.push({ file: f, url: URL.createObjectURL(f) }); });
+    this.value = ''; pintarThumbs();
+  };
+
+  function pintarThumbs() {
+    var html;
+    if (editando) {
+      html = ordenEdit.map(function (id, i) {
+        return '<div class="thumb"><img alt="" src="https://lh3.googleusercontent.com/d/' + esc(id) + '=w400">' + (i === 0 ? '<span class="tag">Portada</span>' : '<button type="button" class="cov" data-p="' + i + '">Portada</button>') +
+          (ordenEdit.length > 1 ? '<button type="button" data-q="' + i + '" aria-label="Quitar foto">×</button>' : '') + '</div>';
+      }).join('');
+    } else {
+      html = nuevas.map(function (n, i) {
+        return '<div class="thumb"><img alt="" src="' + n.url + '">' + (i === 0 ? '<span class="tag">Portada</span>' : '<button type="button" class="cov" data-p="' + i + '">Portada</button>') +
+          '<button type="button" data-q="' + i + '" aria-label="Quitar foto">×</button></div>';
+      }).join('');
+    }
+    $('thumbs').innerHTML = html;
+    var lista = editando ? ordenEdit : nuevas;
+    Array.prototype.forEach.call($('thumbs').querySelectorAll('[data-p]'), function (b) {
+      b.onclick = function () { var i = +b.getAttribute('data-p'); lista.unshift(lista.splice(i, 1)[0]); pintarThumbs(); };
+    });
+    Array.prototype.forEach.call($('thumbs').querySelectorAll('[data-q]'), function (b) {
+      b.onclick = function () { var q = lista.splice(+b.getAttribute('data-q'), 1)[0]; if (q && q.url) URL.revokeObjectURL(q.url); pintarThumbs(); };
+    });
+  }
+
+  $('btn-guardar').onclick = function () {
+    if (enviando || !actual) return;
+    var b = this, titulo = $('titulo').value.trim();
+    if (!titulo) return msg($('msg-form'), 'Pon un título al trabajo.', 'err');
+    var campos = { titulo: titulo, trabajo: $('trabajo').value.trim(), zona: $('zona').value.trim(), fecha: $('fecha').value || hoy(),
+      descripcion: $('descripcion').value.trim(), visible: $('visible').checked };
+    var p;
+    if (editando) {
+      if (ordenEdit.join() !== editando.fotoIds.join()) campos.orden = ordenEdit.slice();
+      p = post(actual.api, { accion: 'galeria_editar', pin: pinDe(actual), id: editando.id, cambios: campos });
+    } else {
+      if (!nuevas.length) return msg($('msg-form'), 'Añade al menos una foto.', 'err');
+      msg($('msg-form'), 'Preparando fotos…');
+      p = Promise.all(nuevas.map(function (n) { return reducir(n.file); })).then(function (fotos) {
+        fotos = fotos.filter(Boolean);
+        if (!fotos.length) throw new Error('No se han podido leer las fotos.');
+        msg($('msg-form'), 'Subiendo ' + fotos.length + (fotos.length === 1 ? ' foto…' : ' fotos…'));
+        campos.accion = 'galeria_crear'; campos.pin = pinDe(actual); campos.fotos = fotos;
+        campos.solicitud = b.getAttribute('data-solicitud') || '';
+        return post(actual.api, campos);
+      });
+    }
+    enviando = true; b.disabled = true;
+    p.then(function (r) {
+      var t = editando ? 'Cambios guardados.' : 'Trabajo subido.' + (r.avisos ? ' ' + r.avisos : '') + ' Ya aparece en su web.';
+      nuevas.forEach(function (n) { URL.revokeObjectURL(n.url); });
+      abrir(actual); setTimeout(function () { msg($('msg-form'), t, 'ok'); }, 50);
+    }).catch(function (x) { msg($('msg-form'), x.message, 'err'); })
+      .then(function () { enviando = false; b.disabled = false; });
+  };
+
+  pintarNegocios();
+  if (negocios.length === 1) abrir(negocios[0]);
+})();
+</script>
+</body>
+</html>

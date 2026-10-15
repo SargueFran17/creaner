@@ -19,6 +19,7 @@
  *   ?accion=cita&id=ID&t=TOKEN                      página para que el cliente cambie o cancele su cita
  *   ?accion=cancelar&id=ID&t=TOKEN                  (antiguo) solo cancelar; se mantiene para emails ya enviados
  *   ?accion=panel                                   panel del negocio (pide PIN)
+ *   ?accion=galeria                                 trabajos visibles de la galería (públicos, para galeria.js)
  *   POST {accion:"reservar", ...}                   crea la cita (cuerpo JSON como text/plain)
  *   POST {accion:"estilo"|"cita_*"|"opinion"|"panel_*", ...}  API de las páginas de la web del negocio
  *        (cita.html, opinion.html, panel.html con https://creaner.es/citas/paginas.js). Ver api_().
@@ -27,7 +28,7 @@
  * RECORDATORIO_HORAS antes de su cita. Se instala con `configurar` o desde el menú.
  */
 
-var VERSION = '1.9';
+var VERSION = '2.0';
 var HOJAS = {
   config: 'Config',
   servicios: 'Servicios',
@@ -36,7 +37,8 @@ var HOJAS = {
   cerrados: 'Cerrados',
   citas: 'Citas',
   opiniones: 'Opiniones',
-  solicitudes: 'Solicitudes'
+  solicitudes: 'Solicitudes',
+  galeria: 'Galería'
 };
 var CAB_CITAS = ['ID', 'Creada', 'Fecha', 'Hora', 'Fin', 'Servicio ID', 'Servicio', 'Profesional ID', 'Profesional',
   'Nombre', 'Teléfono', 'Email', 'Notas', 'Estado', 'Token', 'Evento calendario', 'Recordatorio', 'Reseña'];
@@ -96,7 +98,10 @@ function configurar() {
     ['PRESUPUESTOS', 'NO', 'SI = el negocio recibe solicitudes de presupuesto (formulario de la web y pestaña Solicitudes)'],
     ['TRABAJOS', '', 'Tipos de trabajo del formulario de presupuesto, separados por comas (p. ej. Instalación, Reparación, Mantenimiento)'],
     ['ZONAS', '', 'Opcional: municipios o zonas, separados por comas. Vacío = el cliente escribe su localidad'],
-    ['RESPUESTA_HORAS', '24', 'Plazo que se promete al cliente para llamarle tras pedir presupuesto']
+    ['RESPUESTA_HORAS', '24', 'Plazo que se promete al cliente para llamarle tras pedir presupuesto'],
+    ['GALERIA', 'NO', 'SI = la web muestra la galería de trabajos (pestaña Galería). La actualiza Creaner'],
+    ['GALERIA_MAX', '12', 'Cuántos trabajos enseña la web (los más recientes visibles)'],
+    ['GALERIA_PIN', pinNuevo_(), 'PIN de Creaner para subir trabajos a la galería (creaner.es/citas/galeria.html). Distinto del PIN del panel']
   ]);
   crearHoja_(ss, HOJAS.servicios, ['ID', 'Nombre', 'Duración (min)', 'Precio (€)', 'Categoría', 'Activo'], [
     ['corte', 'Corte', '30', '12', 'Pelo', 'SI'],
@@ -120,7 +125,13 @@ function configurar() {
   ]);
   crearHoja_(ss, HOJAS.citas, CAB_CITAS, []);
   crearHoja_(ss, HOJAS.opiniones, CAB_OPINIONES, []);
-  if (si_(leerConfig_().PRESUPUESTOS)) hojaSolicitudes_();
+  var cfgIni = leerConfig_();
+  if (si_(cfgIni.PRESUPUESTOS)) hojaSolicitudes_();
+  // Hojas de versiones anteriores: añade los ajustes de la galería si faltan
+  if (cfgIni.GALERIA === undefined) guardarAjuste_('GALERIA', si_(cfgIni.PRESUPUESTOS) ? 'SI' : 'NO', 'SI = la web muestra la galería de trabajos (pestaña Galería). La actualiza Creaner');
+  if (cfgIni.GALERIA_MAX === undefined) guardarAjuste_('GALERIA_MAX', '12', 'Cuántos trabajos enseña la web (los más recientes visibles)');
+  if (!cfgIni.GALERIA_PIN) guardarAjuste_('GALERIA_PIN', pinNuevo_(), 'PIN de Creaner para subir trabajos a la galería (creaner.es/citas/galeria.html). Distinto del PIN del panel');
+  if (si_(leerConfig_().GALERIA)) hojaGaleria_();
   asegurarColumnaRecordatorio_();
   instalarActivador_();
 
@@ -336,6 +347,7 @@ function doGet(e) {
       case 'cita': return paginaCita_(q.id, q.t);
       case 'opinion': return paginaOpinion_(q.id, q.t, q.n);
       case 'cancelar': return paginaCancelar_(q.id, q.t, q.confirmar === '1');
+      case 'galeria': return json_(galeriaPublica_());
       case 'panel': return HtmlService.createHtmlOutputFromFile('Panel')
         .setTitle('Panel de citas').addMetaTag('viewport', 'width=device-width, initial-scale=1');
       default: return json_({ ok: true, sistema: 'Creaner Citas', version: VERSION });
@@ -381,6 +393,9 @@ function api_(d) {
     case 'panel_cancelar': return conPin_(d.pin, function () { panelCancelar(d.pin, d.id); return { ok: true }; });
     case 'panel_cerrar': return conPin_(d.pin, function () { panelCerrar(d.pin, d.desde, d.hasta, d.motivo, d.quien); return { ok: true }; });
     case 'panel_estadisticas': return conPin_(d.pin, function () { return { ok: true, datos: panelEstadisticas(d.pin, d.mes) }; });
+    case 'galeria_admin': return conPin_(d.pin, function () { return galeriaAdmin_(d.pin); });
+    case 'galeria_crear': return conPin_(d.pin, function () { return galeriaCrear_(d.pin, d); });
+    case 'galeria_editar': return conPin_(d.pin, function () { return galeriaEditar_(d.pin, d.id, d.cambios || {}); });
   }
 }
 
@@ -1470,4 +1485,150 @@ function panelCerrar(pin, desde, hasta, motivo, quien) {
   SpreadsheetApp.getActive().getSheetByName(HOJAS.cerrados)
     .appendRow([desde, hasta, quien, String(motivo || 'Cerrado').slice(0, 80)]);
   return true;
+}
+
+/* =================================== GALERÍA =================================== */
+/* Trabajos terminados que enseña la web del negocio (galeria.js). Los sube Creaner desde
+   creaner.es/citas/galeria.html con GALERIA_PIN (distinto del PIN del panel del negocio).
+   Las fotos se guardan en la carpeta "Creaner · Galería" del Drive del negocio, compartidas
+   como "cualquiera con el enlace puede ver" para que la web pueda mostrarlas. */
+
+var CAB_GALERIA = ['ID', 'Fecha', 'Título', 'Zona', 'Trabajo', 'Descripción', 'Fotos (IDs de Drive)', 'Visible', 'Solicitud', 'Subido'];
+var MAX_FOTOS_GALERIA = 4;
+
+function pinNuevo_() { return String(Math.floor(100000 + Math.random() * 900000)); }
+
+function hojaGaleria_() {
+  var ss = SpreadsheetApp.getActive();
+  return ss.getSheetByName(HOJAS.galeria) || crearHoja_(ss, HOJAS.galeria, CAB_GALERIA, []);
+}
+
+function carpetaGaleria_() {
+  var nombre = 'Creaner · Galería', it = DriveApp.getFoldersByName(nombre);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(nombre);
+}
+
+function comprobarPinGaleria_(pin) {
+  var cfg = leerConfig_();
+  if (!cfg.GALERIA_PIN || String(pin || '').trim() !== cfg.GALERIA_PIN) throw new Error('PIN incorrecto.');
+  return cfg;
+}
+
+function urlFoto_(id) { return 'https://lh3.googleusercontent.com/d/' + id + '=w1600'; }
+
+function trabajoJson_(r, fila) {
+  var ids = lista_(String(r[6] || '').replace(/\s+/g, ','));
+  return { id: r[0], fecha: r[1], titulo: r[2], zona: r[3], trabajo: r[4], descripcion: r[5],
+    fotos: ids.map(urlFoto_), fotoIds: ids, visible: r[7] === '' ? true : si_(r[7]), solicitud: r[8], subido: r[9], fila: fila };
+}
+
+function leerGaleria_() {
+  var sh = SpreadsheetApp.getActive().getSheetByName(HOJAS.galeria);
+  if (!sh || sh.getLastRow() < 2) return [];
+  return sh.getRange(2, 1, sh.getLastRow() - 1, CAB_GALERIA.length).getDisplayValues()
+    .map(function (r, i) { return trabajoJson_(r, i + 2); })
+    .filter(function (t) { return String(t.id).trim(); })
+    // más recientes primero; con la misma fecha, el último subido primero
+    .sort(function (a, b) { return String(b.fecha).localeCompare(String(a.fecha)) || b.fila - a.fila; });
+}
+
+/** Pública: solo trabajos visibles con foto, los GALERIA_MAX más recientes. Se guarda 10 min en caché. */
+function galeriaPublica_() {
+  var cache = CacheService.getScriptCache(), guardada = cache.get('galeria_publica');
+  if (guardada) return JSON.parse(guardada);
+  var cfg = leerConfig_();
+  if (!si_(cfg.GALERIA)) return { ok: false, error: 'Este negocio no tiene activada la galería.' };
+  var max = parseInt(cfg.GALERIA_MAX, 10) || 12;
+  var out = { ok: true, negocio: cfg.NEGOCIO || '', trabajos: leerGaleria_()
+    .filter(function (t) { return t.visible && t.fotos.length; }).slice(0, max)
+    .map(function (t) { return { id: t.id, fecha: t.fecha, titulo: t.titulo, zona: t.zona, trabajo: t.trabajo, descripcion: t.descripcion, fotos: t.fotos }; }) };
+  try { cache.put('galeria_publica', JSON.stringify(out), 600); } catch (x) {}
+  return out;
+}
+
+function borrarCacheGaleria_() { CacheService.getScriptCache().remove('galeria_publica'); }
+
+/** Para la página de Creaner: todos los trabajos (también ocultos) y las solicitudes terminadas para rellenar rápido. */
+function galeriaAdmin_(pin) {
+  var cfg = comprobarPinGaleria_(pin);
+  var terminadas = [];
+  var sh = SpreadsheetApp.getActive().getSheetByName(HOJAS.solicitudes);
+  if (sh && sh.getLastRow() > 1) {
+    var usadas = {};
+    leerGaleria_().forEach(function (t) { if (t.solicitud) usadas[t.solicitud] = true; });
+    sh.getRange(2, 1, sh.getLastRow() - 1, CAB_SOLICITUDES.length).getDisplayValues().forEach(function (r) {
+      if (r[9] === 'Terminado' && !usadas[r[0]]) terminadas.push({ id: r[0], fecha: String(r[1]).slice(0, 10), trabajo: r[5], zona: r[6] });
+    });
+    terminadas.sort(function (a, b) { return b.fecha.localeCompare(a.fecha); });
+  }
+  return { ok: true, negocio: cfg.NEGOCIO || '', activa: si_(cfg.GALERIA), max: parseInt(cfg.GALERIA_MAX, 10) || 12,
+    web: webNegocio_(cfg) || '', trabajosTipos: lista_(cfg.TRABAJOS), zonas: lista_(cfg.ZONAS),
+    trabajos: leerGaleria_(), terminadas: terminadas.slice(0, 15), color: color_(cfg.COLOR_PRINCIPAL, '#0d1d38') };
+}
+
+function textoGaleria_(v, max) { return String(v === undefined || v === null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max); }
+
+function galeriaCrear_(pin, d) {
+  comprobarPinGaleria_(pin);
+  var tz = tz_(), titulo = textoGaleria_(d.titulo, 80);
+  if (!titulo) return { ok: false, error: 'Pon un título al trabajo.' };
+  var fotos = (Array.isArray(d.fotos) ? d.fotos : []).slice(0, MAX_FOTOS_GALERIA);
+  if (!fotos.length) return { ok: false, error: 'Añade al menos una foto.' };
+  var fecha = normFecha_(d.fecha) || hoy_(tz);
+  var id = 'G' + fecha.replace(/-/g, '').slice(2) + '-' + Utilities.getUuid().slice(0, 4).toUpperCase();
+  var carpeta = carpetaGaleria_(), ids = [];
+  fotos.forEach(function (f, i) {
+    try {
+      var bytes = Utilities.base64Decode(String(f.datos || '').replace(/^data:[^,]*,/, ''));
+      if (!bytes.length || bytes.length > MAX_FOTO_BYTES) return;
+      var tipo = /^image\/(png|webp)$/.test(f.tipo) ? f.tipo : 'image/jpeg';
+      var archivo = carpeta.createFile(Utilities.newBlob(bytes, tipo, id + '-' + (i + 1) + (tipo === 'image/png' ? '.png' : tipo === 'image/webp' ? '.webp' : '.jpg')));
+      archivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      ids.push(archivo.getId());
+    } catch (x) { console.error('Foto de galería ' + i, x); }
+  });
+  if (!ids.length) return { ok: false, error: 'No se ha podido guardar ninguna foto. Prueba con otra imagen.' };
+  var lock = LockService.getScriptLock(); lock.tryLock(10000);
+  try {
+    hojaGaleria_().appendRow([id, fecha, titulo, textoGaleria_(d.zona, 60), textoGaleria_(d.trabajo, 60), textoGaleria_(d.descripcion, 300),
+      ids.join(' '), d.visible === false ? 'NO' : 'SI', textoGaleria_(d.solicitud, 20), Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm')]);
+    SpreadsheetApp.flush();
+  } finally { lock.releaseLock(); }
+  borrarCacheGaleria_();
+  return { ok: true, id: id, fotos: ids.length, avisos: ids.length < fotos.length ? 'Alguna foto no se ha podido guardar.' : '' };
+}
+
+function galeriaEditar_(pin, id, cambios) {
+  comprobarPinGaleria_(pin);
+  var lock = LockService.getScriptLock(); lock.tryLock(10000);
+  try {
+    var t = leerGaleria_().filter(function (x) { return x.id === String(id || ''); })[0];
+    if (!t) throw new Error('Trabajo no encontrado.');
+    var sh = hojaGaleria_();
+    if (cambios.borrar) {
+      t.fotoIds.forEach(function (fid) { try { DriveApp.getFileById(fid).setTrashed(true); } catch (x) {} });
+      sh.deleteRow(t.fila);
+      borrarCacheGaleria_();
+      return { ok: true, borrado: true };
+    }
+    var campos = { fecha: 2, titulo: 3, zona: 4, trabajo: 5, descripcion: 6 }, max = { titulo: 80, zona: 60, trabajo: 60, descripcion: 300 };
+    Object.keys(campos).forEach(function (k) {
+      if (cambios[k] === undefined) return;
+      var v = k === 'fecha' ? normFecha_(cambios[k]) : textoGaleria_(cambios[k], max[k]);
+      if (k === 'fecha' && !v) throw new Error('Fecha no válida.');
+      if (k === 'titulo' && !v) throw new Error('El título no puede quedar vacío.');
+      sh.getRange(t.fila, campos[k]).setValue(v);
+    });
+    if (cambios.visible !== undefined) sh.getRange(t.fila, 8).setValue(cambios.visible ? 'SI' : 'NO');
+    if (Array.isArray(cambios.orden)) { // reordenar fotos (la primera es la portada) o quitar alguna
+      var nuevas = cambios.orden.filter(function (fid) { return t.fotoIds.indexOf(fid) > -1; });
+      if (!nuevas.length) throw new Error('El trabajo necesita al menos una foto.');
+      t.fotoIds.forEach(function (fid) { if (nuevas.indexOf(fid) < 0) { try { DriveApp.getFileById(fid).setTrashed(true); } catch (x) {} } });
+      sh.getRange(t.fila, 7).setValue(nuevas.join(' '));
+    }
+    SpreadsheetApp.flush();
+    borrarCacheGaleria_();
+    var r = sh.getRange(t.fila, 1, 1, CAB_GALERIA.length).getDisplayValues()[0];
+    return { ok: true, trabajo: trabajoJson_(r, t.fila) };
+  } finally { lock.releaseLock(); }
 }
