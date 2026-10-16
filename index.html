@@ -114,39 +114,53 @@ h2.title em.s{font-size:1.1em;color:var(--gold-text)}
 .p-done button{margin-top:6px;border:0;background:transparent;color:var(--navy);font-weight:600;text-decoration:underline;cursor:pointer}
 .phone-note{font-size:13px;color:var(--on-navy-muted);text-align:center}
 
-/* works */
-.works{display:grid;grid-template-columns:1.25fr 1fr;gap:18px}
-.work{border-radius:20px;overflow:hidden;background:#fff;border:1px solid var(--line);display:flex;flex-direction:column}
-.work-art{aspect-ratio:16/10;max-width:100%;position:relative;overflow:hidden}
-.work-main .work-art{background:#121212;color:#f3efe6;display:flex;flex-direction:column;justify-content:flex-end;padding:clamp(20px,3vw,32px);gap:6px}
-.work-main .work-art::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0 2px, transparent 2px 14px);pointer-events:none}
-.work-main .work-art small{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#bdb7ab}
-.work-main .work-art strong{font-size:clamp(28px,4vw,44px);font-weight:800;letter-spacing:-.03em;line-height:1}
-.work-main .work-art strong em.s{color:var(--gold);font-weight:400}
-.work-main .work-art .mini-btn{align-self:flex-start;margin-top:10px;background:#f3efe6;color:#121212;border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600}
-.work-main--salitre .work-art{background:#eef2ef;color:#1c2420}
-.work-main--salitre .work-art::after{display:none}
-.work-main--salitre .work-art small{color:#5d6a63}
-.work-main--salitre .work-art strong{font-family:Georgia,serif;font-weight:400;letter-spacing:-.01em;line-height:1.05}
-.work-main--salitre .work-art strong em.s{color:#2f6157;font-style:italic}
-.work-main--salitre .work-art .mini-btn{background:#2f6157;color:#fff}
-.work-info{padding:18px 20px 20px;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
-.work-info h3{font-size:18px;font-weight:700;letter-spacing:-.01em}
-.work-info p{font-size:14px;color:var(--muted)}
-.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+/* works: dos tipos de web */
+.tipo{border-radius:28px;padding:clamp(20px,3.4vw,40px);display:flex;flex-direction:column;gap:clamp(20px,2.6vw,30px)}
+.tipo + .tipo{margin-top:22px}
+.tipo--res{background:var(--navy);color:var(--on-navy)}
+.tipo--pre{background:var(--grey);border:1px solid var(--line)}
+.tipo-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px 32px;align-items:end}
+.tipo-pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:7px 14px 7px 10px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.tipo-pill svg{width:18px;height:18px;flex:0 0 auto}
+.tipo--res .tipo-pill{background:var(--gold);color:var(--navy)}
+.tipo--pre .tipo-pill{background:var(--navy);color:#fff}
+.tipo-head h3{font-size:clamp(28px,3.6vw,42px);font-weight:800;letter-spacing:-.03em;line-height:1.05;margin-top:14px}
+.tipo-head h3 em.s{color:var(--gold)}
+.tipo--pre .tipo-head h3 em.s{color:var(--gold-text)}
+.tipo-head p{font-size:16.5px;max-width:58ch;margin-top:10px}
+.tipo--res .tipo-head p{color:var(--on-navy-muted)}
+.tipo--pre .tipo-head p{color:var(--muted)}
+.tipo-for{font-size:13.5px;text-align:right;max-width:30ch}
+.tipo--res .tipo-for{color:var(--on-navy-muted)}.tipo--pre .tipo-for{color:var(--muted)}
+.tipo-for b{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px}
+.tipo--res .tipo-for b{color:var(--gold)}.tipo--pre .tipo-for b{color:var(--gold-text)}
+.tipo-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:18px;align-items:stretch}
+.work{border-radius:20px;overflow:hidden;background:#fff;color:var(--ink);border:1px solid var(--line);display:flex;flex-direction:column;text-decoration:none}
+.tipo--res .work{border-color:transparent}
+.stage{position:relative;overflow:hidden;aspect-ratio:16/10.5;padding:clamp(14px,2.4vw,28px) 0 0 clamp(14px,2.4vw,28px)}
+.tipo--res .stage{background:linear-gradient(160deg,#1b3157,#0f2240)}
+.tipo--pre .stage{background:linear-gradient(160deg,#e3e9f1,#d2dbe7)}
+.browser{width:86%;border-radius:12px 12px 0 0;overflow:hidden;background:#fff;box-shadow:0 18px 40px rgba(6,14,30,.28)}
+.browser i{display:flex;gap:5px;padding:8px 10px;background:#eef0f3}
+.browser i::before{content:"";width:8px;height:8px;border-radius:50%;background:#d0d5dd;box-shadow:13px 0 #d0d5dd,26px 0 #d0d5dd}
+.browser img{width:100%;height:auto;aspect-ratio:16/10;object-fit:cover;object-position:top;display:block}
+.stage .movil{position:absolute;right:clamp(12px,3vw,34px);bottom:clamp(-60px,-4vw,-30px);width:25%;border-radius:22px;border:5px solid #0b1528;overflow:hidden;box-shadow:0 24px 50px rgba(6,14,30,.45);background:#0b1528}
+.stage .movil img{width:100%;height:auto;display:block}
+.work--sec .stage{aspect-ratio:auto;flex:1;min-height:200px;padding-right:0;display:flex;flex-direction:column;justify-content:flex-end}
+.work--sec .browser{width:100%;border-radius:12px 0 0 0}
+.estado{position:absolute;left:clamp(14px,2.4vw,28px);top:clamp(14px,2.4vw,28px);z-index:2;display:inline-flex;align-items:center;gap:7px;background:#fff;color:var(--navy);border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:700;box-shadow:0 6px 16px rgba(6,14,30,.18)}
+.estado::before{content:"";width:8px;height:8px;border-radius:50%;background:#2fa36b}
+.work--feat .stage{padding-top:clamp(52px,6vw,72px)}
+.work-info{padding:18px 20px 20px;display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap}
+.work-info h4{font-size:19px;font-weight:700;letter-spacing:-.01em}
+.work--feat .work-info h4{font-size:22px}
+.work-info p{font-size:14.5px;color:var(--muted);margin-top:2px;max-width:46ch}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .tag{font-size:12px;background:var(--grey);border-radius:999px;padding:4px 10px;color:var(--muted)}
-.link-out{font-weight:600;font-size:14.5px;color:var(--navy);text-decoration:none;border-bottom:1.5px solid var(--gold);padding-bottom:2px;white-space:nowrap}
-.works-side{display:grid;grid-template-rows:1fr 1fr;gap:18px}
-.work-demo .demo-art{background:#f3f7f9;padding:20px 22px;display:flex;flex-direction:column;gap:6px;border-bottom:1px solid var(--line);flex:1;justify-content:flex-end;min-height:120px}
-.work-demo .demo-art small{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#557081;font-weight:600}
-.work-demo .demo-art strong{font-size:22px;font-weight:800;letter-spacing:-.03em;line-height:1.05;color:#0a3a57}
-.work-demo .demo-art strong span{color:#ec7a1c}
-.work-soon{border:1.5px dashed var(--line);background:transparent;border-radius:20px;padding:22px;display:flex;flex-direction:column;justify-content:space-between;gap:18px}
-.work-soon .eyebrow{color:var(--muted)}
-.work-soon h3{font-size:20px;font-weight:700;letter-spacing:-.01em;margin-top:6px}
-.work-soon p{font-size:14px;color:var(--muted)}
-.soon-line{display:flex;gap:6px}
-.soon-line i{height:6px;border-radius:3px;background:var(--grey-2)}
+.link-out{font-weight:600;font-size:14.5px;color:var(--navy);border-bottom:1.5px solid var(--gold);padding-bottom:2px;white-space:nowrap}
+.work:hover .link-out{border-bottom-width:3px}
+.work:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+@media (hover:hover){.work .browser{transition:transform .35s ease}.work:hover .browser{transform:translateY(-4px)}}
 
 /* steps */
 .steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;list-style:none;padding:0;margin:0;counter-reset:s}
@@ -209,8 +223,10 @@ footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:1
 
 @media (max-width:920px){
   .hero .wrap{grid-template-columns:1fr}
-  .works{grid-template-columns:1fr}
-  .works-side{grid-template-rows:none;grid-template-columns:1fr 1fr}
+  .tipo-grid{grid-template-columns:1fr}
+  .tipo-head{grid-template-columns:1fr}
+  .tipo-for{text-align:left}
+  .work--sec .stage{aspect-ratio:16/9;flex:none}
   .contact{grid-template-columns:1fr}
   .nav-links{display:none}
 }
@@ -221,7 +237,7 @@ footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:1
   .team{grid-template-columns:1fr}
 }
 @media (max-width:560px){
-  .works-side{grid-template-columns:1fr}
+  .stage .movil{width:30%;border-width:4px;border-radius:16px}
   .row2{grid-template-columns:1fr}
   .person{flex-direction:column}
   .nav .btn{padding:9px 14px}
@@ -283,45 +299,87 @@ footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:1
       <div class="sec-head">
         <p class="eyebrow">Trabajos</p>
         <h2 class="title">Nuestros <em class="s">trabajos</em></h2>
-        <p>Cada web se diseña a partir del negocio: su estilo, sus servicios y su forma de trabajar.</p>
+        <p>Hacemos dos tipos de web, según cómo te llegan los clientes. Cada una se diseña a partir del negocio: su estilo, sus servicios y su forma de trabajar.</p>
       </div>
-      <div class="works">
-        <article class="work work-main work-main--salitre">
-          <div class="work-art">
-            <small>Proyecto de ejemplo · Estética</small>
-            <strong>Tu hora de calma, <em class="s">reservada</em>.</strong>
-            <span class="mini-btn">Reservar tratamiento</span>
+      <div class="tipo tipo--res">
+        <div class="tipo-head">
+          <div>
+            <span class="tipo-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3"/></svg>Webs con reservas</span>
+            <h3>Tus clientes reservan <em class="s">solos</em>, a cualquier hora</h3>
+            <p>Reserva online, confirmación y recordatorio por email, cambios y cancelaciones sin llamar, y tu agenda en el móvil.</p>
           </div>
-          <div class="work-info">
-            <div>
-              <h3>Salitre Estudio</h3>
-              <p>Reserva en 4 pasos: tratamiento, profesional, día y hora.</p>
-              <div class="tags"><span class="tag">Reservas</span><span class="tag">Precios claros</span><span class="tag">Tarjeta regalo</span></div>
+          <p class="tipo-for"><b>Para negocios con cita</b>Barberías, peluquerías, estética, clínicas, fisios…</p>
+        </div>
+        <div class="tipo-grid">
+          <a class="work work--feat" href="https://teknikcuts.github.io/teknikcuts-web/" target="_blank" rel="noopener">
+            <div class="stage">
+              <span class="estado">Cliente real · En marcha</span>
+              <div class="browser"><i></i><img src="assets/trabajos/teknik-escritorio.webp" alt="Web de TeknikCuts en el ordenador" width="1400" height="875" loading="lazy"></div>
+              <div class="movil"><img src="assets/trabajos/teknik-movil.webp" alt="Web de TeknikCuts en el móvil" width="420" height="882" loading="lazy"></div>
             </div>
-            <a class="link-out" href="demos/salitre/">Ver web ↗</a>
-          </div>
-        </article>
-        <div class="works-side">
-          <article class="work work-demo">
-            <div class="demo-art" style="background:#121212"><small style="color:#bdb7ab">Barbería</small><strong style="color:#f3efe6">Teknik <span style="color:var(--gold);font-family:var(--f-serif);font-style:italic;font-weight:400">Cuts</span></strong></div>
             <div class="work-info">
               <div>
-                <h3>Teknik Cuts</h3>
-                <p>Web de barbería con reserva online en menos de un minuto.</p>
+                <h4>TeknikCuts</h4>
+                <p>Barbería en Fuengirola. Sus clientes reservan en menos de un minuto y Jorge lleva la agenda desde su panel.</p>
+                <div class="tags"><span class="tag">Reservas 24 h</span><span class="tag">Recordatorios</span><span class="tag">Panel y estadísticas</span></div>
               </div>
-              <a class="link-out" href="https://teknikcuts.github.io/teknikcuts-web/" target="_blank" rel="noopener">Ver web ↗</a>
+              <span class="link-out">Ver web ↗</span>
             </div>
-          </article>
-          <article class="work work-demo">
-            <div class="demo-art"><small>Proyecto de ejemplo · Aire acondicionado</small><strong>Que el <span>terral</span> se quede fuera.</strong></div>
+          </a>
+          <a class="work work--sec" href="demos/salitre/">
+            <div class="stage">
+              <div class="browser"><i></i><img src="assets/trabajos/salitre-escritorio.webp" alt="Web de Salitre Estudio en el ordenador" width="1400" height="875" loading="lazy"></div>
+            </div>
             <div class="work-info">
               <div>
-                <h3>Terral Clima</h3>
-                <p>Presupuesto online, calculadora de potencia y reserva de revisión.</p>
+                <h4>Salitre Estudio</h4>
+                <p>Estética. Reserva en 4 pasos: tratamiento, profesional, día y hora.</p>
+                <div class="tags"><span class="tag">Proyecto de ejemplo</span></div>
               </div>
-              <a class="link-out" href="demos/terral-clima/">Ver web ↗</a>
+              <span class="link-out">Ver web ↗</span>
             </div>
-          </article>
+          </a>
+        </div>
+      </div>
+
+      <div class="tipo tipo--pre">
+        <div class="tipo-head">
+          <div>
+            <span class="tipo-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Webs con presupuestos</span>
+            <h3>Te piden precio <em class="s">con fotos</em>, sin perder ni uno</h3>
+            <p>Formulario de presupuesto con fotos, aviso al momento, panel con cada solicitud y una galería de trabajos que actualizamos cada mes.</p>
+          </div>
+          <p class="tipo-for"><b>Para empresas de servicios</b>Climatización, fontanería, reformas, electricidad…</p>
+        </div>
+        <div class="tipo-grid">
+          <a class="work work--feat" href="demos/terral-clima/">
+            <div class="stage">
+              <span class="estado">Demo funcionando</span>
+              <div class="browser"><i></i><img src="assets/trabajos/terral-escritorio.webp" alt="Web de Terral Clima en el ordenador" width="1400" height="875" loading="lazy"></div>
+              <div class="movil"><img src="assets/trabajos/terral-movil.webp" alt="Web de Terral Clima en el móvil" width="420" height="882" loading="lazy"></div>
+            </div>
+            <div class="work-info">
+              <div>
+                <h4>Terral Clima</h4>
+                <p>Aire acondicionado. Presupuesto online con fotos, calculadora de potencia y galería de instalaciones.</p>
+                <div class="tags"><span class="tag">Presupuestos 24 h</span><span class="tag">Galería mensual</span><span class="tag">Panel de solicitudes</span></div>
+              </div>
+              <span class="link-out">Ver web ↗</span>
+            </div>
+          </a>
+          <a class="work work--sec" href="demos/caudal-fontaneria/">
+            <div class="stage">
+              <div class="browser"><i></i><img src="assets/trabajos/caudal-escritorio.webp" alt="Web de Caudal Fontanería en el ordenador" width="1400" height="875" loading="lazy"></div>
+            </div>
+            <div class="work-info">
+              <div>
+                <h4>Caudal Fontanería</h4>
+                <p>Fontanería. Averías, reformas de baño y termos, con presupuesto sin compromiso.</p>
+                <div class="tags"><span class="tag">Proyecto de ejemplo</span></div>
+              </div>
+              <span class="link-out">Ver web ↗</span>
+            </div>
+          </a>
         </div>
       </div>
     </div>
