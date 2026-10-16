@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{ seo.titulo }}</title>
+<meta name="description" content="{{ seo.descripcion }}">
+{% if url %}<link rel="canonical" href="{{ url }}">{% endif %}
+{% if demo %}<meta name="robots" content="noindex">{% endif %}
+<meta name="theme-color" content="{{ c.principal }}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{ seo.titulo }}">
+<meta property="og:description" content="{{ seo.descripcion }}">
+{% if url %}<meta property="og:url" content="{{ url }}">{% endif %}
+{% if hero.foto %}<meta property="og:image" content="{{ hero.foto_abs }}">{% endif %}
+<link rel="icon" href="{{ favicon }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="{{ fuentes_url }}">
+<script type="application/ld+json">{{ jsonld | safe }}</script>
+<style>
+:root{
+  color-scheme: light;
+  --p:{{ c.principal }};        /* color principal (cabecera, botones) */
+  --p-on:{{ c.principal_on }};
+  --p-2:{{ c.principal_2 }};
+  --a:{{ c.acento }};           /* acento (llamadas a la acción, detalles) */
+  --a-on:{{ c.acento_on }};
+  --a-soft:{{ c.acento_soft }};
+  --bg:{{ c.fondo }};
+  --white:#ffffff;
+  --ink:{{ c.tinta }};
+  --muted:{{ c.suave }};
+  --line:{{ c.linea }};
+  --bad:#a2463a;
+  --r:{{ radio }}px;
+  --f-d:"{{ fuentes.titulos }}", system-ui, sans-serif;
+  --f-b:"{{ fuentes.texto }}", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-b);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+img{max-width:100%;display:block}
+a{color:inherit}
+h1,h2,h3,p{margin:0}
+.wrap{max-width:1160px;margin:0 auto;padding-inline:20px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:12px;top:-60px;background:var(--a);color:var(--a-on);padding:10px 14px;border-radius:8px;z-index:99;font-weight:700}
+.skip:focus{top:12px}
+:focus-visible{outline:3px solid var(--a);outline-offset:2px}
+.kicker{font-size:12.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--p-2)}
+h2.t{font-family:var(--f-d);font-weight:800;font-size:clamp(30px,4.2vw,46px);line-height:1.04;letter-spacing:-.03em;text-wrap:balance;margin-top:10px;color:var(--ink)}
+.lead{font-size:clamp(16.5px,1.6vw,18.5px);color:var(--muted);max-width:56ch;margin-top:14px}
+.sec{padding-block:clamp(64px,9vw,104px)}
+.sec-head{display:flex;flex-direction:column;align-items:flex-start;max-width:720px;margin-bottom:clamp(28px,4vw,44px)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:999px;font:inherit;font-weight:700;font-size:16px;padding:14px 22px;min-height:50px;text-decoration:none;cursor:pointer;transition:transform .15s ease,filter .15s ease}
+.btn:hover{filter:brightness(1.06)}.btn:active{transform:translateY(1px)}
+.btn-a{background:var(--a);color:var(--a-on)}
+.btn-p{background:var(--p);color:var(--p-on)}
+.btn-o{background:transparent;color:inherit;box-shadow:inset 0 0 0 1.5px currentColor}
+.btn svg{width:18px;height:18px;flex:0 0 auto}
+
+/* barra superior */
+.top{background:var(--p);color:var(--p-on);font-size:13.5px}
+.top .wrap{display:flex;justify-content:space-between;gap:16px;padding-block:8px;flex-wrap:wrap}
+.top span{opacity:.85}.top a{text-decoration:none;font-weight:700}
+
+/* navegación */
+.nav{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--white) 94%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:68px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--f-d);font-weight:800;font-size:21px;letter-spacing:-.025em;color:var(--p);min-width:0}
+.logo img{height:38px;width:auto}
+.logo span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.logo .mono{width:36px;height:36px;border-radius:10px;background:var(--p);color:var(--p-on);display:grid;place-items:center;font-size:18px;flex:0 0 auto}
+.nav-links{display:flex;gap:26px;font-size:15px;color:var(--muted)}
+.nav-links a{text-decoration:none}.nav-links a:hover{color:var(--ink)}
+.nav-cta{display:flex;align-items:center;gap:14px}
+.nav-tel{text-align:right;line-height:1.2;text-decoration:none}
+.nav-tel small{display:block;font-size:12px;color:var(--muted)}
+.nav-tel b{font-size:16px;color:var(--ink);font-variant-numeric:tabular-nums}
+.nav .btn{min-height:44px;padding:10px 18px;font-size:15px}
+
+/* hero */
+.hero{position:relative;overflow:hidden;background:var(--p);color:var(--p-on)}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:clamp(28px,5vw,64px);align-items:center;padding-block:clamp(48px,8vw,96px)}
+.hero .kicker{color:var(--a)}
+.hero h1{font-family:var(--f-d);font-weight:800;font-size:clamp(40px,6.2vw,74px);line-height:.98;letter-spacing:-.04em;text-wrap:balance;margin-top:14px}
+.hero h1 em{font-style:normal;color:var(--a)}
+.hero .lead{color:inherit;opacity:.85}
+.hero-ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
+.datos{display:flex;flex-wrap:wrap;gap:clamp(18px,3vw,36px);margin-top:36px;padding-top:24px;border-top:1px solid color-mix(in srgb,var(--p-on) 18%,transparent)}
+.datos div{display:flex;flex-direction:column}
+.datos b{font-family:var(--f-d);font-size:clamp(24px,2.6vw,30px);font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.datos span{font-size:14px;opacity:.75}
+.hero-ph{position:relative;aspect-ratio:4/5;border-radius:calc(var(--r) * 1.6);overflow:hidden;background:var(--p-2)}
+.hero-ph img{width:100%;height:100%;object-fit:cover}
+.hero-ph.vacio{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--p-on) 6%,transparent) 0 14px,transparent 14px 28px),var(--p-2);display:grid;place-items:center}
+.hero-ph.vacio span{font-size:13px;opacity:.6}
+.sello{position:absolute;left:16px;bottom:16px;right:16px;background:var(--white);color:var(--ink);border-radius:var(--r);padding:14px 16px;display:flex;gap:12px;align-items:center;box-shadow:0 18px 40px rgba(0,0,0,.18)}
+.sello .st{color:#e0a92e;letter-spacing:2px;font-size:15px}
+.sello b{display:block;font-size:15px}.sello small{color:var(--muted);font-size:13px}
+
+/* servicios */
+.svc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.svc-card{background:var(--white);border:1px solid var(--line);border-radius:var(--r);padding:24px;display:flex;flex-direction:column;gap:8px}
+.ico{width:46px;height:46px;border-radius:12px;background:var(--a-soft);display:grid;place-items:center;margin-bottom:8px}
+.ico svg{width:24px;height:24px;stroke:var(--p);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.svc-card h3{font-family:var(--f-d);font-size:20px;font-weight:800;letter-spacing:-.015em}
+.svc-card p{color:var(--muted);font-size:15px}
+.svc-card .desde{margin-top:auto;padding-top:10px;font-size:14px;font-weight:700;color:var(--p-2)}
+
+/* pasos */
+.pasos{display:grid;grid-template-columns:repeat({{ pasos|length }},minmax(0,1fr));gap:14px;counter-reset:p}
+.paso{position:relative;padding:22px 20px 22px;border-radius:var(--r);background:var(--white);border:1px solid var(--line)}
+.paso::before{counter-increment:p;content:counter(p);display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--p);color:var(--p-on);font-weight:800;font-size:15px;margin-bottom:14px}
+.paso h3{font-size:17px;font-weight:700}.paso p{font-size:14.5px;color:var(--muted);margin-top:4px}
+
+/* presupuesto */
+.pres{background:var(--white);border-block:1px solid var(--line)}
+.pres .wrap{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:clamp(28px,5vw,64px);align-items:start}
+.check{list-style:none;padding:0;margin:24px 0 0;display:flex;flex-direction:column;gap:12px}
+.check li{display:flex;gap:12px;align-items:flex-start}
+.check li::before{content:"";flex:0 0 22px;height:22px;border-radius:50%;margin-top:1px;background:var(--a-soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M6 10.5l2.5 2.5L14 7.5' fill='none' stroke='%23{{ c.principal[1:] }}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/100% no-repeat}
+.alt{margin-top:28px;padding:18px;border-radius:var(--r);background:var(--bg);font-size:15px}
+.alt b{display:block;margin-bottom:8px}
+.alt .row{display:flex;flex-wrap:wrap;gap:10px}
+.alt .btn{min-height:44px;padding:10px 16px;font-size:15px}
+.form{background:var(--bg);border:1px solid var(--line);border-radius:calc(var(--r) * 1.3);padding:clamp(20px,3vw,30px);display:flex;flex-direction:column;gap:14px}
+.form h3{font-family:var(--f-d);font-weight:800;font-size:24px;letter-spacing:-.02em}
+.f{display:flex;flex-direction:column;gap:6px;min-width:0}
+.f label{font-size:14px;font-weight:600}
+.f input,.f select,.f textarea{width:100%;font:inherit;font-size:16px;color:inherit;background:var(--white);border:1px solid var(--line);border-radius:10px;padding:12px 13px}
+.f textarea{min-height:104px;resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--white);border-radius:999px;padding:9px 14px;font:inherit;font-size:14.5px;cursor:pointer;color:inherit;min-height:42px}
+.chip[aria-pressed="true"]{background:var(--p);border-color:var(--p);color:var(--p-on)}
+.file{border:1.5px dashed var(--line);border-radius:12px;padding:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:14px;color:var(--muted);background:var(--white)}
+.file label{color:var(--p);font-weight:700;cursor:pointer}
+.file input{position:absolute;opacity:0;width:1px;height:1px}
+.trap{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.err{color:var(--bad);font-size:14px;min-height:1em}
+.small{font-size:13px;color:var(--muted)}
+.ok{border-radius:var(--r);background:var(--a-soft);padding:22px}
+.ok b{display:block;font-family:var(--f-d);font-size:22px;margin-bottom:6px}
+
+/* trabajos */
+.works{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.work{border-radius:var(--r);overflow:hidden;background:var(--white);border:1px solid var(--line);display:flex;flex-direction:column}
+.work .ph{aspect-ratio:4/3;position:relative;background:var(--line)}
+.work .ph.ej{background:repeating-linear-gradient(135deg,var(--bg) 0 14px,var(--a-soft) 14px 28px)}
+.work .ph span{position:absolute;right:10px;bottom:10px;background:rgba(0,0,0,.6);color:#fff;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px}
+.work .ph span:empty{display:none}
+.work .ph.ej span{left:10px;right:auto;background:rgba(255,255,255,.92);color:var(--muted)}
+.work .inf{padding:14px 16px 18px}
+.work h3{font-size:16.5px;font-weight:700}
+.work .lug{font-size:13px;font-weight:600;color:var(--p-2);margin-top:2px}
+.work p{font-size:14.5px;color:var(--muted);margin-top:4px}
+
+/* opiniones */
+.revs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.rev{background:var(--white);border:1px solid var(--line);border-radius:var(--r);padding:22px;display:flex;flex-direction:column;gap:12px}
+.rev .st{color:#e0a92e;letter-spacing:2px}
+.rev p{font-size:15.5px}
+.rev small{color:var(--muted);font-size:13.5px;margin-top:auto}
+.resenas{margin-top:20px;font-size:15px}
+.resenas a{font-weight:700;color:var(--p)}
+
+/* zona + faq */
+.zona .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(28px,5vw,64px);align-items:start}
+.pueblos{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px;padding:0;list-style:none}
+.pueblos li{background:var(--white);border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:14.5px}
+.faq details{border-bottom:1px solid var(--line)}
+.faq summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:16px;padding:18px 0;font-weight:700;font-size:16.5px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-size:22px;line-height:1;color:var(--p-2);transition:transform .2s}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq details p{padding:0 0 18px;color:var(--muted);font-size:15.5px;max-width:62ch}
+
+/* cierre + pie */
+.cierre{background:var(--p);color:var(--p-on);text-align:center}
+.cierre .wrap{display:flex;flex-direction:column;align-items:center;gap:16px}
+.cierre h2.t{color:inherit}
+.cierre .lead{color:inherit;opacity:.85;margin-top:0}
+footer{background:color-mix(in srgb,var(--p) 92%,#000);color:color-mix(in srgb,var(--p-on) 78%,transparent);font-size:14px;padding-block:40px calc(40px + env(safe-area-inset-bottom))}
+footer .cols{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:28px}
+footer b{display:block;color:var(--p-on);margin-bottom:8px;font-size:15px}
+footer p{margin-bottom:4px}
+footer a{text-decoration:none}footer a:hover{text-decoration:underline}
+footer .legal{margin-top:32px;padding-top:18px;border-top:1px solid color-mix(in srgb,var(--p-on) 14%,transparent);display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;font-size:13px}
+
+/* botones fijos */
+.wa{position:fixed;right:18px;bottom:18px;z-index:40;width:58px;height:58px;border-radius:50%;background:#25d366;color:#fff;display:grid;place-items:center;box-shadow:0 10px 26px rgba(0,0,0,.22)}
+.wa svg{width:30px;height:30px}
+.barra{display:none}
+.demo-bar{background:var(--a);color:var(--a-on);text-align:center;font-size:13px;padding:7px 16px}
+
+@media (max-width:980px){
+  .nav-links{display:none}
+  .hero .wrap,.pres .wrap,.zona .wrap{grid-template-columns:minmax(0,1fr)}
+  .hero-ph{aspect-ratio:16/11;max-height:420px}
+  .svc,.works,.revs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pasos{grid-template-columns:repeat(2,minmax(0,1fr))}
+  footer .cols{grid-template-columns:1fr 1fr}
+}
+@media (max-width:640px){
+  .top .horario{display:none}
+  .nav-tel{display:none}
+  .nav .btn{display:none}
+  .logo{font-size:19px}
+  .svc,.works,.revs,.pasos,.row2{grid-template-columns:minmax(0,1fr)}
+  footer .cols{grid-template-columns:minmax(0,1fr)}
+  .hero-ctas .btn{flex:1 1 auto}
+  .wa{display:none}
+  .barra{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--white);border-top:1px solid var(--line);padding:8px 8px calc(8px + env(safe-area-inset-bottom));gap:8px;box-shadow:0 -6px 20px rgba(0,0,0,.06)}
+  .barra a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:52px;border-radius:12px;text-decoration:none;font-size:12.5px;font-weight:700}
+  .barra a svg{width:20px;height:20px}
+  .barra .b1{background:var(--bg);color:var(--ink)}
+  .barra .b2{background:var(--a);color:var(--a-on)}
+  .barra .b3{background:#25d366;color:#fff}
+  body{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.btn{transition:none}}
+</style>
+</head>
+<body>
+<a class="skip" href="#presupuesto">Saltar al formulario de presupuesto</a>
+{% if demo %}<div class="demo-bar"><b>Proyecto de ejemplo</b> · Negocio ficticio creado por Creaner para mostrar una web de presupuestos</div>{% endif %}
+
+<div class="top"><div class="wrap">
+  <span>{{ top_texto }}</span>
+  <span class="horario">{% if contacto.horario %}{{ contacto.horario }} · {% endif %}<a href="tel:{{ contacto.tel_link }}">{{ contacto.telefono }}</a></span>
+</div></div>
+
+<header class="nav"><div class="wrap">
+  <a class="logo" href="#top" aria-label="{{ negocio }}, inicio">{% if logo %}<img src="{{ logo }}" alt="">{% else %}<span class="mono" aria-hidden="true">{{ negocio[:1] }}</span>{% endif %}<span>{{ negocio }}</span></a>
+  <nav class="nav-links" aria-label="Secciones">
+    <a href="#servicios">Servicios</a><a href="#presupuesto">Presupuesto</a><a href="#trabajos">Trabajos</a>{% if opiniones %}<a href="#opiniones">Opiniones</a>{% endif %}{% if faq %}<a href="#preguntas">Preguntas</a>{% endif %}
+  </nav>
+  <div class="nav-cta">
+    <a class="nav-tel" href="tel:{{ contacto.tel_link }}"><small>{{ contacto.tel_etiqueta }}</small><b>{{ contacto.telefono }}</b></a>
+    <a class="btn btn-a" href="#presupuesto">Pedir presupuesto</a>
+  </div>
+</div></header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <p class="kicker">{{ hero.etiqueta }}</p>
+        <h1>{{ hero.titulo }}{% if hero.destacado %} <em>{{ hero.destacado }}</em>{% endif %}</h1>
+        <p class="lead">{{ hero.texto }}</p>
+        <div class="hero-ctas">
+          <a class="btn btn-a" href="#presupuesto">{{ hero.boton }}</a>
+          <a class="btn btn-o" href="tel:{{ contacto.tel_link }}">{{ icon('tel') | safe }}Llamar ahora</a>
+        </div>
+        {% if hero.datos %}<div class="datos">{% for d in hero.datos %}<div><b>{{ d.valor }}</b><span>{{ d.texto }}</span></div>{% endfor %}</div>{% endif %}
+      </div>
+      <div class="hero-ph{% if not hero.foto %} vacio{% endif %}">
+        {% if hero.foto %}<img src="{{ hero.foto }}" alt="{{ hero.foto_alt }}" fetchpriority="high">{% else %}<span>Foto real de un trabajo</span>{% endif %}
+        {% if sello %}<div class="sello"><div><span class="st" aria-hidden="true">★★★★★</span><b>{{ sello.titulo }}</b><small>{{ sello.texto }}</small></div></div>{% endif %}
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="servicios">
+    <div class="wrap">
+      <div class="sec-head"><p class="kicker">Servicios</p><h2 class="t">{{ textos.servicios_titulo }}</h2>{% if textos.servicios_texto %}<p class="lead">{{ textos.servicios_texto }}</p>{% endif %}</div>
+      <div class="svc">
+        {% for s in servicios %}<article class="svc-card"><div class="ico" aria-hidden="true">{{ icon(s.icono) | safe }}</div><h3>{{ s.nombre }}</h3><p>{{ s.texto }}</p>{% if s.desde %}<span class="desde">{{ s.desde }}</span>{% endif %}</article>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" style="padding-top:0">
+    <div class="wrap">
+      <div class="sec-head"><p class="kicker">Cómo trabajamos</p><h2 class="t">{{ textos.pasos_titulo }}</h2></div>
+      <ol class="pasos" style="list-style:none;padding:0;margin:0">
+        {% for p in pasos %}<li class="paso"><h3>{{ p.titulo }}</h3><p>{{ p.texto }}</p></li>{% endfor %}
+      </ol>
+    </div>
+  </section>
+
+  <section class="sec pres" id="presupuesto">
+    <div class="wrap">
+      <div>
+        <p class="kicker">Presupuesto sin compromiso</p>
+        <h2 class="t">{{ presupuesto.titulo }}</h2>
+        <p class="lead">{{ presupuesto.texto }}</p>
+        <ul class="check">{% for x in presupuesto.ventajas %}<li>{{ x }}</li>{% endfor %}</ul>
+        <div class="alt"><b>¿Prefieres hablarlo?</b><div class="row">
+          <a class="btn btn-p" href="tel:{{ contacto.tel_link }}">{{ icon('tel') | safe }}{{ contacto.telefono }}</a>
+          {% if contacto.wa_link %}<a class="btn btn-o" href="{{ contacto.wa_link }}" target="_blank" rel="noopener">{{ icon('wa') | safe }}WhatsApp</a>{% endif %}
+        </div></div>
+      </div>
+      <div id="pres-caja">
+        <form class="form" id="pres" novalidate aria-labelledby="pres-h">
+          <h3 id="pres-h">Pide tu presupuesto</h3>
+          <div class="f"><span id="tr-l" style="font-size:14px;font-weight:600">¿Qué necesitas?</span>
+            <div class="chips" role="group" aria-labelledby="tr-l" id="tr">{% for t in presupuesto.trabajos %}<button type="button" class="chip" aria-pressed="{{ 'true' if loop.first else 'false' }}">{{ t }}</button>{% endfor %}</div>
+          </div>
+          <div class="f"><label for="zo">{{ 'Zona' if presupuesto.zonas else 'Localidad' }}</label>
+            {% if presupuesto.zonas %}<select id="zo">{% for z in presupuesto.zonas %}<option>{{ z }}</option>{% endfor %}<option>Otra</option></select>{% else %}<input id="zo" type="text" autocomplete="address-level2">{% endif %}
+          </div>
+          <div class="f"><label for="ms">Cuéntanos un poco más</label><textarea id="ms" maxlength="1500" placeholder="{{ presupuesto.placeholder }}"></textarea></div>
+          <div class="file"><span id="fn">{{ presupuesto.fotos_texto }}</span><label for="fo">Subir fotos</label><input type="file" id="fo" accept="image/*" multiple></div>
+          <div class="row2">
+            <div class="f"><label for="no">Nombre</label><input id="no" type="text" autocomplete="name" required></div>
+            <div class="f"><label for="te">Teléfono</label><input id="te" type="tel" autocomplete="tel" inputmode="tel" required></div>
+          </div>
+          <div class="f"><label for="em">Email (opcional, para enviarte la confirmación)</label><input id="em" type="email" autocomplete="email"></div>
+          <div class="trap" aria-hidden="true"><label>Web<input id="web" type="text" tabindex="-1" autocomplete="off"></label></div>
+          <button class="btn btn-a" type="submit" id="pres-btn">Pedir presupuesto gratis</button>
+          <p class="err" id="er" aria-live="polite"></p>
+          <p class="small">Te llamamos en menos de {{ presupuesto.horas }} h. Al enviar aceptas la <a href="privacidad.html">política de privacidad</a>.</p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="trabajos">
+    <div class="wrap">
+      <div class="sec-head"><p class="kicker">Trabajos</p><h2 class="t">{{ textos.trabajos_titulo }}</h2>{% if textos.trabajos_texto %}<p class="lead">{{ textos.trabajos_texto }}</p>{% endif %}</div>
+      <div class="works" data-creaner-galeria data-api="{{ api }}">
+        {% for w in trabajos_ejemplo %}<article class="work"><div class="ph ej"><span>Foto real del trabajo</span></div><div class="inf"><h3>{{ w.titulo }}</h3>{% if w.lugar %}<p class="lug">{{ w.lugar }}</p>{% endif %}<p>{{ w.texto }}</p></div></article>
+        {% endfor %}
+        <template data-galeria><article class="work"><div class="ph" data-g="foto"><span data-g="nfotos"></span></div><div class="inf"><h3 data-g="titulo"></h3><p class="lug" data-g="lugar"></p><p data-g="descripcion"></p></div></article></template>
+      </div>
+    </div>
+  </section>
+
+  {% if opiniones %}<section class="sec" id="opiniones" style="padding-top:0">
+    <div class="wrap">
+      <div class="sec-head"><p class="kicker">Opiniones</p><h2 class="t">{{ textos.opiniones_titulo }}</h2></div>
+      <div class="revs">
+        {% for o in opiniones %}<figure class="rev" style="margin:0"><span class="st" aria-label="{{ o.estrellas }} de 5 estrellas">{{ '★' * o.estrellas }}</span><blockquote style="margin:0"><p>“{{ o.texto }}”</p></blockquote><figcaption><small>{{ o.nombre }}{% if o.fuente %} · {{ o.fuente }}{% endif %}</small></figcaption></figure>
+        {% endfor %}
+      </div>
+      {% if resenas_url %}<p class="resenas"><a href="{{ resenas_url }}" target="_blank" rel="noopener">Ver todas las opiniones en Google →</a></p>{% endif %}
+    </div>
+  </section>{% endif %}
+
+  <section class="sec zona" style="background:var(--white);border-top:1px solid var(--line)">
+    <div class="wrap">
+      <div>
+        <p class="kicker">Zona de trabajo</p>
+        <h2 class="t">{{ textos.zona_titulo }}</h2>
+        <p class="lead">{{ textos.zona_texto }}</p>
+        {% if presupuesto.zonas %}<ul class="pueblos">{% for z in presupuesto.zonas %}<li>{{ z }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+      {% if faq %}<div class="faq" id="preguntas">
+        <p class="kicker" style="margin-bottom:6px">Preguntas frecuentes</p>
+        {% for q in faq %}<details{% if loop.first %} open{% endif %}><summary>{{ q.p }}</summary><p>{{ q.r }}</p></details>
+        {% endfor %}
+      </div>{% endif %}
+    </div>
+  </section>
+
+  <section class="sec cierre">
+    <div class="wrap">
+      <h2 class="t">{{ textos.cierre_titulo }}</h2>
+      <p class="lead">{{ textos.cierre_texto }}</p>
+      <div class="hero-ctas" style="justify-content:center;margin-top:8px">
+        <a class="btn btn-a" href="#presupuesto">Pedir presupuesto</a>
+        <a class="btn btn-o" href="tel:{{ contacto.tel_link }}">{{ icon('tel') | safe }}{{ contacto.telefono }}</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="cols">
+      <div><b>{{ negocio }}</b><p>{{ seo.descripcion }}</p></div>
+      <div><b>Contacto</b>
+        <p><a href="tel:{{ contacto.tel_link }}">{{ contacto.telefono }}</a></p>
+        {% if contacto.email %}<p><a href="mailto:{{ contacto.email }}">{{ contacto.email }}</a></p>{% endif %}
+        {% if contacto.direccion %}<p>{{ contacto.direccion }}</p>{% endif %}
+      </div>
+      <div><b>Horario</b><p>{{ contacto.horario or 'Llámanos o escríbenos' }}</p>{% if contacto.urgencias %}<p>{{ contacto.urgencias }}</p>{% endif %}</div>
+    </div>
+    <div class="legal">
+      <span>© {{ anio }} {{ legal.titular or negocio }}{% if demo %} · Negocio ficticio de ejemplo{% endif %}</span>
+      <span><a href="aviso-legal.html">Aviso legal</a> · <a href="privacidad.html">Privacidad</a> · <a href="https://creaner.es" rel="noopener">Web creada por Creaner</a></span>
+    </div>
+  </div>
+</footer>
+
+{% if contacto.wa_link %}<a class="wa" href="{{ contacto.wa_link }}" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp">{{ icon('wa') | safe }}</a>{% endif %}
+<nav class="barra" aria-label="Contacto rápido">
+  <a class="b1" href="tel:{{ contacto.tel_link }}">{{ icon('tel') | safe }}Llamar</a>
+  <a class="b2" href="#presupuesto">{{ icon('doc') | safe }}Presupuesto</a>
+  {% if contacto.wa_link %}<a class="b3" href="{{ contacto.wa_link }}" target="_blank" rel="noopener">{{ icon('wa') | safe }}WhatsApp</a>{% else %}<a class="b3" href="#trabajos">{{ icon('foto') | safe }}Trabajos</a>{% endif %}
+</nav>
+
+<script>
+(function(){
+  'use strict';
+  /* API de la hoja del negocio (Creaner · presupuesto.js y galeria.js). Vacía = modo demo. */
+  var API = {{ api | tojson }};
+  var MAX = 3;
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+
+  // tipo de trabajo (chips de una sola opción)
+  var chips = Array.prototype.slice.call(document.querySelectorAll('#tr .chip'));
+  chips.forEach(function(b){ b.addEventListener('click',function(){ chips.forEach(function(x){ x.setAttribute('aria-pressed', x===b ? 'true' : 'false'); }); }); });
+  function trabajo(){ var b = document.querySelector('#tr .chip[aria-pressed="true"]'); return b ? b.textContent : ''; }
+
+  var fo = $('fo'), txtFotos = $('fn').textContent;
+  fo.addEventListener('change',function(){
+    var n = Math.min(fo.files.length, MAX);
+    $('fn').textContent = n ? n + (n===1?' foto añadida':' fotos añadidas') + (fo.files.length>MAX?' (máx. '+MAX+')':'') : txtFotos;
+  });
+
+  function ok(nombre, horas, conEmail, demo){
+    $('pres-caja').innerHTML = '<div class="ok" role="status" tabindex="-1" id="pres-ok"><b>¡Solicitud enviada' + (nombre ? ', ' + esc(nombre) : '') + '!</b>' +
+      'Te llamaremos en menos de ' + esc(horas) + ' horas' + (conEmail ? '. Te hemos enviado la confirmación por email.' : '.') +
+      (demo ? '<p class="small" style="margin-top:10px">Esto es una demo: en la web real la solicitud llega al momento al email del negocio y a su panel.</p>' : '') + '</div>';
+    $('pres-ok').focus();
+  }
+
+  $('pres').addEventListener('submit',function(e){
+    e.preventDefault();
+    function v(id){ var el=$(id); return el ? el.value.trim() : ''; }
+    var er = $('er'), b = $('pres-btn'), n = v('no'), t = v('te');
+    if (!n || t.replace(/\D/g,'').length < 9) { er.textContent = 'Pon tu nombre y un teléfono para que podamos llamarte.'; (n ? $('te') : $('no')).focus(); return; }
+    var mail = v('em');
+    if (mail && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(mail)) { er.textContent = 'El email no parece correcto (o déjalo vacío).'; $('em').focus(); return; }
+    er.textContent = '';
+    if (!API || !window.CreanerPresupuestos) { ok(n, {{ presupuesto.horas | tojson }}, !!mail, true); return; }
+    b.disabled = true; b.textContent = fo.files.length ? 'Enviando fotos…' : 'Enviando…';
+    CreanerPresupuestos.enviar(API, { nombre:n, telefono:t, email:mail, trabajo:trabajo(), zona:v('zo'), mensaje:v('ms'), web:v('web') }, fo.files)
+      .then(function(r){ if(!r.ok) throw new Error(r.error || 'No se ha podido enviar.'); ok(n, r.horas || {{ presupuesto.horas | tojson }}, !!mail, false); })
+      .catch(function(x){ b.disabled = false; b.textContent = 'Pedir presupuesto gratis'; er.textContent = x.message + ' También puedes llamarnos al ' + {{ contacto.telefono | tojson }} + '.'; });
+  });
+})();
+</script>
+<script src="https://creaner.es/citas/presupuesto.js" defer></script>
+<script src="https://creaner.es/citas/galeria.js" defer></script>
+</body>
+</html>

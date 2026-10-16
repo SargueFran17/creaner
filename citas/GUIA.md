@@ -104,6 +104,9 @@ La web enseña los trabajos que sube Creaner cada mes. Las fotos viven en el Dri
 5. Desde la misma página: editar, cambiar la portada, quitar fotos, ocultar o borrar (las fotos borradas van a la papelera del Drive del negocio). Cada cliente indica cuántos días hace del último trabajo: en ámbar si pasa de un mes.
 6. Los cambios se ven en la web al momento. Las fotos quedan como "cualquiera con el enlace puede ver" para que la web pueda mostrarlas.
 
+## 5f. Web de presupuestos a partir de la plantilla
+Para un cliente nuevo sin citas, la web se genera con `plantillas/presupuestos/crear_web.py` a partir de un `cliente.json` (instrucciones en `plantillas/presupuestos/README.md`). Con `api` puesto, la web ya sale conectada al formulario y a la galería, con `panel.html` y `opinion.html` con sus colores.
+
 ## 6. Comprobar antes de entregar
 - [ ] Hacer una reserva de prueba desde la web (con tu email) y comprobar que llegan los 2 emails.
 - [ ] Comprobar que existe el activador `enviarRecordatorios` y que el recordatorio de prueba llega bien.

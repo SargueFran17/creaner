@@ -1,0 +1,82 @@
+{
+  "negocio": "Caudal Fontanería",
+  "actividad": "Fontanería",
+  "tipo_schema": "Plumber",
+  "demo": true,
+  "url": "https://creaner.es/demos/caudal-fontaneria/",
+  "api": "",
+
+  "colores": { "principal": "#173b35", "acento": "#f4b400", "fondo": "#f4f6f3" },
+  "fuentes": { "titulos": "Archivo", "texto": "Manrope" },
+  "radio": 14,
+  "logo": "",
+
+  "contacto": {
+    "telefono": "600 000 000",
+    "whatsapp": "600000000",
+    "email": "hola@caudal-ejemplo.es",
+    "direccion": "",
+    "ciudad": "Fuengirola",
+    "provincia": "Málaga",
+    "horario": "Lunes a viernes de 8:00 a 19:00",
+    "urgencias": "Urgencias: también fines de semana",
+    "tel_etiqueta": "Urgencias y presupuestos"
+  },
+
+  "hero": {
+    "etiqueta": "Fontanería en Fuengirola, Mijas y Benalmádena",
+    "titulo": "Fugas, baños y calentadores,",
+    "destacado": "resueltos sin sorpresas.",
+    "texto": "Fontaneros de confianza en la Costa del Sol. Presupuesto cerrado antes de empezar y trabajo limpio, con garantía por escrito.",
+    "boton": "Pedir presupuesto gratis",
+    "foto": "",
+    "datos": [
+      { "valor": "24 h", "texto": "para darte precio" },
+      { "valor": "2 años", "texto": "de garantía" },
+      { "valor": "+600", "texto": "trabajos terminados" }
+    ]
+  },
+  "sello": { "titulo": "4,9 en Google", "texto": "Opiniones de clientes reales" },
+
+  "servicios": [
+    { "nombre": "Fugas y averías", "texto": "Localizamos la fuga sin romper de más y la dejamos reparada el mismo día siempre que se pueda.", "desde": "Desde 45 € la salida", "icono": "gota" },
+    { "nombre": "Reforma de baño", "texto": "Cambiamos la bañera por plato de ducha, sanitarios y grifería. Te ayudamos a elegir.", "desde": "Plato de ducha desde 690 €", "icono": "casa" },
+    { "nombre": "Calentadores y termos", "texto": "Instalación y cambio de termos eléctricos y calentadores de gas, con retirada del viejo.", "desde": "Termo instalado desde 290 €", "icono": "fuego" },
+    { "nombre": "Desatascos", "texto": "Fregaderos, inodoros y bajantes. Con máquina y sin productos que dañen la tubería.", "icono": "tuberia" },
+    { "nombre": "Instalaciones nuevas", "texto": "Tuberías de cocina y baño para obra nueva o reforma completa, con boletín.", "icono": "llave" },
+    { "nombre": "Mantenimiento", "texto": "Revisiones para comunidades, alquileres vacacionales y locales.", "icono": "escudo" }
+  ],
+
+  "presupuesto": {
+    "titulo": "Cuéntanos qué pasa y te damos precio hoy",
+    "texto": "Rellena el formulario o mándanos fotos por WhatsApp. Te llamamos en menos de 24 horas para darte un precio cerrado.",
+    "horas": 24,
+    "trabajos": ["Fuga o avería", "Reforma de baño", "Termo o calentador", "Desatasco", "Otro"],
+    "zonas": ["Fuengirola", "Mijas", "Benalmádena", "Torremolinos", "Marbella"],
+    "ventajas": ["Presupuesto gratis y por escrito", "Precio cerrado antes de empezar", "2 años de garantía en mano de obra", "Recogemos y dejamos todo limpio"],
+    "placeholder": "Dónde está la fuga, qué quieres cambiar, medidas del baño…",
+    "fotos_texto": "Una foto de la avería o del baño nos ayuda mucho"
+  },
+
+  "trabajos_ejemplo": [
+    { "titulo": "Bañera por plato de ducha", "lugar": "Reforma de baño · Los Boliches", "texto": "Plato de 140 cm, mampara y grifo termostático en dos días." },
+    { "titulo": "Termo de 80 litros", "lugar": "Calentadores · Mijas Costa", "texto": "Cambio del termo viejo y retirada en una mañana." },
+    { "titulo": "Fuga bajo el suelo", "lugar": "Fugas · Benalmádena", "texto": "Localizada con detector, levantando solo dos baldosas." }
+  ],
+
+  "opiniones": [
+    { "nombre": "María J.", "texto": "Vinieron el mismo día por una fuga en la cocina. Precio claro desde el principio y lo dejaron todo limpio.", "estrellas": 5, "fuente": "Opinión de ejemplo" },
+    { "nombre": "Andrés P.", "texto": "Nos cambiaron la bañera por un plato de ducha en dos días. Muy buen trabajo y muy formales.", "estrellas": 5, "fuente": "Opinión de ejemplo" },
+    { "nombre": "Lucía R.", "texto": "Mandé fotos por WhatsApp y en una hora tenía el presupuesto del termo. Rápidos y serios.", "estrellas": 5, "fuente": "Opinión de ejemplo" }
+  ],
+  "resenas_url": "",
+
+  "faq": [
+    { "p": "¿Cuánto cuesta que vengáis a ver el trabajo?", "r": "El presupuesto es gratis. En averías urgentes cobramos la salida, que se descuenta si hacemos la reparación." },
+    { "p": "¿Cuánto tardáis en venir?", "r": "Para urgencias solemos llegar el mismo día. Para reformas, te damos fecha al aceptar el presupuesto." },
+    { "p": "¿Dais garantía?", "r": "Sí, 2 años en la mano de obra y la garantía del fabricante en los aparatos que instalamos." },
+    { "p": "¿Puedo mandaros fotos en vez de que vengáis?", "r": "Claro. Con fotos o un vídeo corto por WhatsApp podemos darte precio en muchos trabajos sin desplazarnos." }
+  ],
+
+  "legal": { "titular": "", "nif": "", "direccion": "" }
+}
