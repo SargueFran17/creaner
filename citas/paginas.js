@@ -370,7 +370,8 @@
         pintarStats(r.datos);
       }).catch(function (x) { main.innerHTML = '<div class="cp-status">No se han podido calcular. ' + esc(x.message) + '</div>'; });
     }
-    function euros(n) { return (Math.round(n * 100) / 100).toLocaleString('es-ES', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }) + ' €'; }
+    // En español, 1.450 lleva punto (toLocaleString no lo pone con 4 cifras)
+    function euros(n) { n = Math.round(n * 100) / 100; var p = (n % 1 ? n.toFixed(2) : String(n)).split('.'); return p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (p[1] ? ',' + p[1] : '') + ' €'; }
     function nombreMes(m) { var p = m.split('-'); return MESES_L[+p[1] - 1]; }
     function pintarStats(d) {
       $('cp-nav').hidden = false; $('cp-tabs').hidden = false;

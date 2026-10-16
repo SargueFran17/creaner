@@ -528,7 +528,7 @@ function plantilla_(titulo, cuerpo) {
   return '<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;color:#1c1f24">' +
     '<div style="height:4px;background:' + col + ';border-radius:2px;margin-bottom:20px"></div>' + logo +
     '<h2 style="margin:0 0 12px;color:' + col + '">' + esc_(titulo) + '</h2>' + cuerpo +
-    '<p style="color:#888;font-size:12px;margin-top:24px">Reservas gestionadas con Creaner</p></div>';
+    '<p style="color:#888;font-size:12px;margin-top:24px">' + (si_(c.PRESUPUESTOS) && !(c.CITAS === undefined || c.CITAS === '' || si_(c.CITAS)) ? 'Gestionado con Creaner' : 'Reservas gestionadas con Creaner') + '</p></div>';
 }
 
 function lineaCita_(servicio, profesional, fecha, hora) {
