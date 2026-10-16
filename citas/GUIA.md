@@ -62,6 +62,8 @@ Así el cliente nunca ve el aviso de "aplicación creada por un usuario de Googl
 5. El panel se bloquea 15 minutos tras 8 PIN incorrectos seguidos.
 6. Si WEB_NEGOCIO está vacío, todo sigue funcionando con las páginas de Google (con su aviso gris): solo como solución temporal.
 
+**Identidad de cada web (siempre):** en el div de cita.html, opinion.html y panel.html pon `data-color` (color principal de la web), `data-fondo` (fondo claro), `data-logo` (símbolo o logo que se vea sobre el color principal y sobre el fondo) y `data-fuente` (la fuente de la web, cargada con su `<link>` de Google Fonts en el head). Mandan sobre la hoja, así que las páginas se ven como la web aunque Config esté sin tocar. Pon también COLOR_PRINCIPAL y LOGO_URL en Config para que los **emails** salgan con los mismos colores.
+
 ## 5b. Panel del negocio
 - Dirección: `WEB_NEGOCIO/panel.html` (menú **Creaner Citas → Ver enlace del panel**; queda guardada en Config → ENLACE_PANEL).
 - Se entra con el **PIN_PANEL** de la pestaña Config. Que el negocio lo guarde en favoritos del móvil.

@@ -7,6 +7,9 @@
  *   panel.html    → <div id="creaner-pagina" data-pagina="panel"   data-api="URL_DEL_SCRIPT/exec"></div>
  *   y en las tres: <script src="https://creaner.es/citas/paginas.js" defer></script>
  * Colores y logo salen de la hoja del negocio (Config: COLOR_PRINCIPAL, FONDO_PANEL, LOGO_URL, SALUDO).
+ * Para que las páginas lleven la identidad de la web aunque la hoja no esté personalizada, el div acepta
+ * (y mandan sobre la hoja): data-color="#0a3a57" data-fondo="#f3f7f9" data-logo="logo.svg"
+ * data-fuente='"Figtree", sans-serif' (carga la fuente con su <link> en la propia página).
  */
 (function () {
   'use strict';
@@ -21,6 +24,11 @@
     Q[decodeURIComponent(i < 0 ? kv : kv.slice(0, i))] = decodeURIComponent(i < 0 ? '' : kv.slice(i + 1).replace(/\+/g, ' '));
   });
   var E = { color: '#1c1f24', fondo: '#f4f5f7', negocio: '', logo: '', saludo: '', telefono: '', horas: 24 };
+  function hex(v) { v = String(v || '').trim(); return /^#[0-9a-fA-F]{6}$/.test(v) ? v : ''; }
+  // Identidad de la web (data-*): manda sobre la hoja
+  var WEB = { color: hex(root.getAttribute('data-color')), fondo: hex(root.getAttribute('data-fondo')),
+    logo: root.getAttribute('data-logo') || '', fuente: (root.getAttribute('data-fuente') || '').replace(/[;{}<>]/g, '') };
+  if (WEB.fuente) root.style.fontFamily = WEB.fuente;
 
   /* ----------------------------------- utilidades ----------------------------------- */
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -117,7 +125,7 @@
   root.innerHTML = '<div class="cp-w"><p class="cp-neg">Cargando…</p></div>';
 
   function aplicarEstilo(e) {
-    E.color = e.color || E.color; E.fondo = e.fondo || E.fondo; E.negocio = e.negocio || ''; E.logo = e.logo || '';
+    E.color = WEB.color || e.color || E.color; E.fondo = WEB.fondo || e.fondo || E.fondo; E.negocio = e.negocio || ''; E.logo = WEB.logo || e.logo || '';
     E.saludo = e.saludo || ''; E.telefono = e.telefono || ''; if (e.horas != null) E.horas = e.horas;
     E.citas = e.citas !== false; E.presupuestos = !!e.presupuestos;
     root.style.setProperty('--cp-c', E.color); root.style.setProperty('--cp-on', textoSobre(E.color)); root.style.setProperty('--cp-bg', E.fondo);
